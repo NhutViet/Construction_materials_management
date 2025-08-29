@@ -7,8 +7,12 @@ import {
   Typography,
   Container,
   Alert,
+  CircularProgress,
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '../store';
+import { loginUser, clearError } from '../store/slices/authSlice';
 
 interface FormData {
   username: string;
@@ -20,16 +24,30 @@ const Login: React.FC = () => {
     username: '',
     password: '',
   });
-  const [error, setError] = useState<string>('');
+  
   const navigate = useNavigate();
+  const location = useLocation();
+  const dispatch = useDispatch<AppDispatch>();
+  
+  // Lấy state từ Redux store
+  const { isLoading, error, isAuthenticated } = useSelector((state: RootState) => state.auth);
 
-  // Kiểm tra nếu đã đăng nhập thì redirect về trang chủ
+  // Lấy trang mà user muốn truy cập (nếu có)
+  const from = (location.state as any)?.from?.pathname || '/dashboard/home';
+
+  // Kiểm tra nếu đã đăng nhập thì redirect về trang chủ hoặc trang intended
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem('isLoggedIn');
-    if (isLoggedIn) {
-      navigate('/dashboard/home');
+    if (isAuthenticated) {
+      navigate(from, { replace: true });
     }
-  }, [navigate]);
+  }, [isAuthenticated, navigate, from]);
+
+  // Clear error khi component unmount hoặc khi user thay đổi input
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+    };
+  }, [dispatch]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -37,18 +55,27 @@ const Login: React.FC = () => {
       ...prev,
       [name]: value
     }));
+    
+    // Clear error khi user bắt đầu nhập
+    if (error) {
+      dispatch(clearError());
+    }
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    // Kiểm tra đăng nhập đơn giản
-    if (formData.username === 'admin' && formData.password === 'password') {
-      // Đăng nhập thành công
-      localStorage.setItem('isLoggedIn', 'true');
-      navigate('/dashboard/home');
-    } else {
-      setError('Username hoặc password không đúng!');
+    try {
+      const result = await dispatch(loginUser({
+        username: formData.username,
+        password: formData.password
+      })).unwrap();
+      
+      // Login thành công sẽ được xử lý trong useEffect ở trên
+      console.log('Login successful:', result);
+    } catch (error) {
+      // Error đã được xử lý trong Redux slice
+      console.error('Login failed:', error);
     }
   };
 
@@ -94,6 +121,7 @@ const Login: React.FC = () => {
               autoFocus
               value={formData.username}
               onChange={handleChange}
+              disabled={isLoading}
               sx={{ mb: 2 }}
             />
             <TextField
@@ -107,12 +135,14 @@ const Login: React.FC = () => {
               autoComplete="current-password"
               value={formData.password}
               onChange={handleChange}
+              disabled={isLoading}
               sx={{ mb: 3 }}
             />
             <Button
               type="submit"
               fullWidth
               variant="contained"
+              disabled={isLoading}
               sx={{ 
                 mt: 2, 
                 mb: 2,
@@ -121,12 +151,16 @@ const Login: React.FC = () => {
                 fontWeight: 'bold'
               }}
             >
-              Đăng Nhập
+              {isLoading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                'Đăng Nhập'
+              )}
             </Button>
           </Box>
           
           <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-            Demo: username: admin, password: password
+            Vui lòng nhập thông tin đăng nhập của bạn
           </Typography>
         </Paper>
       </Box>

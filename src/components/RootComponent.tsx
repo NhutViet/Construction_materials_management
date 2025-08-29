@@ -1,20 +1,10 @@
-import React, { useEffect } from "react";
+import React from "react";
 import NavBarComponent from "./NavBarComponent";
 import { Box, Grid } from "@mui/material";
 import SideBarComponent from "./SideBarComponent";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 
 const RootComponent: React.FC = () => {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    // Kiểm tra xem người dùng đã đăng nhập chưa
-    const isLoggedIn = localStorage.getItem('isLoggedIn');
-    if (!isLoggedIn) {
-      navigate('/login');
-    }
-  }, [navigate]);
-
   return (
     <>
       <NavBarComponent />

@@ -8,9 +8,22 @@ const AxiosInstance = (token = "", contentType = "application/json") => {
   // Request interceptor
   axiosInstance.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
-      // Validate token if provided
-      if (token && token.trim() !== "") {
-        config.headers.set('Authorization', `Bearer ${token}`);
+      // Try to get token from localStorage if not provided
+      let authToken = token;
+      if (!authToken) {
+        try {
+          const savedToken = localStorage.getItem('accessToken');
+          if (savedToken) {
+            authToken = JSON.parse(savedToken);
+          }
+        } catch (error) {
+          console.error('Error parsing token from localStorage:', error);
+        }
+      }
+
+      // Set headers
+      if (authToken && authToken.trim() !== "") {
+        config.headers.set('Authorization', `Bearer ${authToken}`);
         config.headers.set('Accept', 'application/json');
         config.headers.set('Content-Type', contentType);
       } else {
@@ -35,7 +48,11 @@ const AxiosInstance = (token = "", contentType = "application/json") => {
         switch (err.response.status) {
           case 401:
             console.error("Unauthorized - Token may be expired");
-            // Redirect to login or refresh token
+            // Clear localStorage and redirect to login
+            localStorage.removeItem('user');
+            localStorage.removeItem('accessToken');
+            // You can dispatch logout action here if you have access to store
+            window.location.href = '/login';
             break;
           case 403:
             console.error("Forbidden - Insufficient permissions");
