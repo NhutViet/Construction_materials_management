@@ -22,9 +22,15 @@ import {
 } from "@mui/icons-material";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "../store";
+import { logout } from "../store/slices/authSlice";
 
 const NavBarComponent: React.FC = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
+  const { user } = useSelector((state: RootState) => state.auth);
+  
   const [notificationAnchorEl, setNotificationAnchorEl] = useState<HTMLElement | null>(null);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   
@@ -48,9 +54,31 @@ const NavBarComponent: React.FC = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('isLoggedIn');
+    dispatch(logout());
     navigate('/login');
     setAnchorEl(null);
+  };
+
+  // Get user initials for avatar
+  const getUserInitials = () => {
+    if (user?.fullname) {
+      return user.fullname.charAt(0).toUpperCase();
+    }
+    if (user?.username) {
+      return user.username.charAt(0).toUpperCase();
+    }
+    return 'U';
+  };
+
+  // Get display name
+  const getDisplayName = () => {
+    if (user?.fullname) {
+      return user.fullname;
+    }
+    if (user?.username) {
+      return user.username;
+    }
+    return 'User';
   };
 
   return (
@@ -89,7 +117,7 @@ const NavBarComponent: React.FC = () => {
                     alignItems: "center",
                   }}
                 >
-                  <IconButton color="inherit">
+                  <IconButton color="inherit" onClick={handleNotificationClicked}>
                     <Badge variant="dot" color="error" invisible={false}>
                       <NotificationsOutlined
                         sx={{ width: 32, height: 32 }}
@@ -114,10 +142,10 @@ const NavBarComponent: React.FC = () => {
                     aria-haspopup="true"
                   >
                     <Tooltip title="account settings">
-                      <Avatar sx={{ width: 32, height: 32 }}>Z</Avatar>
+                      <Avatar sx={{ width: 32, height: 32 }}>{getUserInitials()}</Avatar>
                     </Tooltip>
                   </IconButton>
-                  <Typography fontFamily={"Inter"}>ADMI ZAKARYAE</Typography>
+                  <Typography fontFamily={"Inter"}>{getDisplayName()}</Typography>
                 </Box>
 
                 <Menu

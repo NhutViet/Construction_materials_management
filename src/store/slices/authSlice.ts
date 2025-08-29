@@ -24,24 +24,63 @@ interface AuthState {
   error: string | null;
 }
 
-const initialState: AuthState = {
-  user: null,
-  accessToken: null,
-  isAuthenticated: false,
-  isLoading: false,
-  error: null,
+// Helper functions for localStorage
+const saveToStorage = (key: string, value: any) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.error('Error saving to localStorage:', error);
+  }
 };
+
+const getFromStorage = (key: string) => {
+  try {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : null;
+  } catch (error) {
+    console.error('Error reading from localStorage:', error);
+    return null;
+  }
+};
+
+const removeFromStorage = (key: string) => {
+  try {
+    localStorage.removeItem(key);
+  } catch (error) {
+    console.error('Error removing from localStorage:', error);
+  }
+};
+
+// Get initial state from localStorage
+const getInitialState = (): AuthState => {
+  const savedUser = getFromStorage('user');
+  const savedToken = getFromStorage('accessToken');
+  
+  return {
+    user: savedUser,
+    accessToken: savedToken,
+    isAuthenticated: !!(savedUser && savedToken),
+    isLoading: false,
+    error: null,
+  };
+};
+
+const initialState: AuthState = getInitialState();
 
 export const loginUser = createAsyncThunk(
   'auth/loginUser',
   async (credentials: { username: string; password: string }, { rejectWithValue }) => {
     try {
-      const response = await AxiosInstance().post('/auth/login', credentials);
-      if (response.status === 200) {
-        return response.data as LoginResponse;
+      const response: any = await AxiosInstance().post('/auth/login', credentials);
+      console.log('Login response:', response);
+      
+      // Kiểm tra response có đúng format không (vì Axios interceptor trả về res.data)
+      if (response && response.user && response.access_token) {
+        return response as LoginResponse;
       }
-      return rejectWithValue('Login failed');
+      return rejectWithValue('Invalid response format');
     } catch (error: any) {
+      console.error('Login error details:', error);
       if (error.response?.data?.message) {
         return rejectWithValue(error.response.data.message);
       }
@@ -61,9 +100,18 @@ const authSlice = createSlice({
     loginSuccess: (state, action: PayloadAction<LoginResponse>) => {
       state.isLoading = false;
       state.isAuthenticated = true;
-      state.user = action.payload.user;
+      // Add accessToken to user object for easier access
+      const userWithToken = {
+        ...action.payload.user,
+        accessToken: action.payload.access_token
+      };
+      state.user = userWithToken;
       state.accessToken = action.payload.access_token;
       state.error = null;
+      
+      // Save to localStorage
+      saveToStorage('user', userWithToken);
+      saveToStorage('accessToken', action.payload.access_token);
     },
     loginFailure: (state, action: PayloadAction<string>) => {
       state.isLoading = false;
@@ -74,6 +122,10 @@ const authSlice = createSlice({
       state.accessToken = null;
       state.isAuthenticated = false;
       state.error = null;
+      
+      // Remove from localStorage
+      removeFromStorage('user');
+      removeFromStorage('accessToken');
     },
     clearError: (state) => {
       state.error = null;
@@ -96,6 +148,10 @@ const authSlice = createSlice({
         state.user = userWithToken;
         state.accessToken = action.payload.access_token;
         state.error = null;
+        
+        // Save to localStorage
+        saveToStorage('user', userWithToken);
+        saveToStorage('accessToken', action.payload.access_token);
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.isLoading = false;

@@ -17,6 +17,7 @@ import Report from "./components/bodyComponents/report/Report";
 import Setting from "./components/bodyComponents/Settings/Setting";
 import Order from "./components/bodyComponents/order/Order";
 import Login from "./components/Login";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const App: React.FC = () => {
   const theme = createTheme({
@@ -50,7 +51,14 @@ const App: React.FC = () => {
       <>
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<RootComponent />}>
+        <Route 
+          path="/dashboard" 
+          element={
+            <ProtectedRoute>
+              <RootComponent />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<RootPage />} />
           <Route path="/dashboard/home" element={<Home />}></Route>
           <Route path="/dashboard/inventory" element={<Inventory />}></Route>
