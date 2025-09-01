@@ -1,9 +1,9 @@
-import { Avatar, Typography } from "@mui/material";
+import { Avatar, Typography, Box } from "@mui/material";
 import React from "react";
 //more about avatar refres to https://mui.com/material-ui/react-avatar/
 const Product: React.FC<{ productName: string }> = ({ productName }) => {
   return (
-    <>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
       <Avatar
         alt="alt"
         // src="image/source"
@@ -12,10 +12,10 @@ const Product: React.FC<{ productName: string }> = ({ productName }) => {
         A
       </Avatar>
 
-      <Typography sx={{ mx: 3 }} variant="subtitle2">
+      <Typography variant="subtitle2" sx={{ flex: 1 }}>
         {productName}
       </Typography>
-    </>
+    </Box>
   );
 }
 

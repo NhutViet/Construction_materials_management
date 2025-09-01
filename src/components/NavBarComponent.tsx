@@ -107,7 +107,7 @@ const NavBarComponent: React.FC = () => {
                     textDecoration: "none",
                   }}
                 >
-                  ADIMS
+                  Quản lý vật liệu xây dựng
                 </Typography>
 
                 <Box
@@ -158,7 +158,7 @@ const NavBarComponent: React.FC = () => {
                     <ListItemIcon>
                       <AccountCircleOutlined fontSize="small" />
                     </ListItemIcon>
-                    Profile
+                    Hồ sơ
                   </MenuItem>
                   <Divider />
 
@@ -166,13 +166,13 @@ const NavBarComponent: React.FC = () => {
                     <ListItemIcon>
                       <Settings fontSize="small" />
                     </ListItemIcon>
-                    Settings
+                    Cài đặt
                   </MenuItem>
                   <MenuItem onClick={handleLogout}>
                     <ListItemIcon>
                       <Logout fontSize="small" />
                     </ListItemIcon>
-                    Logout
+                    Đăng xuất
                   </MenuItem>
                 </Menu>
               </Box>
