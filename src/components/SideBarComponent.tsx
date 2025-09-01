@@ -23,6 +23,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 interface SideBarItem {
   title: string;
+  path: string;
   component: React.ReactElement;
 }
 
@@ -37,35 +38,43 @@ const SideBarComponent: React.FC = () => {
 
   const sideBarComponent: SideBarItem[] = [
     {
-      title: "Home",
+      title: "Trang chủ",
+      path: "home",
       component: <HomeOutlined fontSize="medium" color="primary" />,
     },
     {
-      title: "Inventory",
+      title: "Hàng hoá",
+      path: "inventory",
       component: <Inventory2Outlined fontSize="medium" color="primary" />,
     },
     {
-      title: "Orders",
+      title: "Đơn hàng",
+      path: "orders",
       component: <CardTravelOutlined fontSize="medium" color="primary" />,
     },
     {
-      title: "Customers",
+      title: "Khách hàng",
+      path: "customers",
       component: <PeopleAltOutlined fontSize="medium" color="primary" />,
     },
     {
-      title: "Revenue",
+      title: "Doanh thu",
+      path: "revenue",
       component: <MonetizationOnOutlined fontSize="medium" color="primary" />,
     },
     {
-      title: "Growth",
+      title: "Tăng trưởng",
+      path: "growth",
       component: <TrendingUpOutlined fontSize="medium" color="primary" />,
     },
     {
-      title: "Reports",
+      title: "Báo cáo",
+      path: "reports",
       component: <DescriptionOutlined fontSize="medium" color="primary" />,
     },
     {
-      title: "Settings",
+      title: "Cài đặt",
+      path: "settings",
       component: <SettingsOutlined fontSize="medium" color="primary" />,
     },
   ];
@@ -85,11 +94,11 @@ const SideBarComponent: React.FC = () => {
               <ListItemButton
                 onClick={(event) => {
                   handleSelectedComponent(event, index);
-                  navigateTo("/dashboard/" + comp.title.toLowerCase());
+                  navigateTo("/dashboard/" + comp.path);
                 }}
                 selected={
                   index === selected &&
-                  currentPage === "/dashboard/" + comp.title.toLowerCase()
+                  currentPage === "/dashboard/" + comp.path
                 }
                 sx={{
                   mb: 3,

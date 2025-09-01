@@ -1,6 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer from './slices/authSlice';
 import inventoryReducer from './slices/inventorySlice';
+import materialReducer from './slices/materialSlice';
 import orderReducer from './slices/orderSlice';
 import customerReducer from './slices/customerSlice';
 import revenueReducer from './slices/revenueSlice';
@@ -9,6 +10,7 @@ export const store = configureStore({
   reducer: {
     auth: authReducer,
     inventory: inventoryReducer,
+    materials: materialReducer,
     order: orderReducer,
     customer: customerReducer,
     revenue: revenueReducer,
