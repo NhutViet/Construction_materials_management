@@ -40,7 +40,7 @@ const AxiosInstance = (token = "", contentType = "application/json") => {
 
   // Response interceptor
   axiosInstance.interceptors.response.use(
-    (res: AxiosResponse) => res.data,
+    (res: AxiosResponse) => res,
     async (err: AxiosError) => {
       // Handle specific error cases
       if (err.response) {

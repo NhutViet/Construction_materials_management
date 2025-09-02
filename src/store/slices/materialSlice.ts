@@ -59,7 +59,7 @@ export const fetchMaterials = createAsyncThunk(
       const axiosInstance = AxiosInstance();
       const response = await axiosInstance.get('/materials');
       console.log('Fetch materials response:', response);
-      return response;
+      return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch materials');
     }
@@ -72,7 +72,7 @@ export const fetchMaterialById = createAsyncThunk(
     try {
       const axiosInstance = AxiosInstance();
       const response = await axiosInstance.get(`/materials/${id}`);
-      return response;
+      return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch material');
     }
@@ -85,7 +85,7 @@ export const createMaterial = createAsyncThunk(
     try {
       const axiosInstance = AxiosInstance();
       const response = await axiosInstance.post('/materials', materialData);
-      return response;
+      return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to create material');
     }
@@ -98,7 +98,7 @@ export const updateMaterial = createAsyncThunk(
     try {
       const axiosInstance = AxiosInstance();
       const response = await axiosInstance.patch(`/materials/${id}`, materialData);
-      return response;
+      return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to update material');
     }
@@ -111,7 +111,7 @@ export const deleteMaterial = createAsyncThunk(
     try {
       const axiosInstance = AxiosInstance();
       const response = await axiosInstance.delete(`/materials/${id}`);
-      return response;
+      return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to delete material');
     }
@@ -124,7 +124,7 @@ export const fetchMaterialsByCategory = createAsyncThunk(
     try {
       const axiosInstance = AxiosInstance();
       const response = await axiosInstance.get(`/materials/category/${category}`);
-      return response;
+      return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch materials by category');
     }
@@ -137,7 +137,7 @@ export const fetchLowStockMaterials = createAsyncThunk(
     try {
       const axiosInstance = AxiosInstance();
       const response = await axiosInstance.get(`/materials/low-stock?threshold=${threshold}`);
-      return response;
+      return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch low stock materials');
     }

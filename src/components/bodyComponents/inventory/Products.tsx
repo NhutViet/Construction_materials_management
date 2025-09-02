@@ -11,7 +11,7 @@ import {
   selectFilteredMaterials,
   deleteMaterial
 } from "../../../store/slices/materialSlice";
-import { Table, Column } from "./Table";
+import { Table, Column } from "../components/Table";
 import Product from "./Product";
 import MaterialModal from "./MaterialModal";
 import FilterBar from "./FilterBar";
