@@ -16,6 +16,7 @@ import Growth from "./components/bodyComponents/growth/Growth";
 import Report from "./components/bodyComponents/report/Report";
 import Setting from "./components/bodyComponents/Settings/Setting";
 import Order from "./components/bodyComponents/order/Order";
+import Profile from "./components/bodyComponents/profile/Profile";
 import Login from "./components/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -68,6 +69,7 @@ const App: React.FC = () => {
           <Route path="/dashboard/growth" element={<Growth />}></Route>
           <Route path="/dashboard/reports" element={<Report />}></Route>
           <Route path="/dashboard/settings" element={<Setting />}></Route>
+          <Route path="/dashboard/profile" element={<Profile />}></Route>
         </Route>
       </>
     )

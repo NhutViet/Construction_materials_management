@@ -59,6 +59,11 @@ const NavBarComponent: React.FC = () => {
     setAnchorEl(null);
   };
 
+  const handleProfileClick = () => {
+    navigate('/dashboard/profile');
+    setAnchorEl(null);
+  };
+
   // Get user initials for avatar
   const getUserInitials = () => {
     if (user?.fullname) {
@@ -154,7 +159,7 @@ const NavBarComponent: React.FC = () => {
                   onClick={handleClose}
                   onClose={handleClose}
                 >
-                  <MenuItem>
+                  <MenuItem onClick={handleProfileClick}>
                     <ListItemIcon>
                       <AccountCircleOutlined fontSize="small" />
                     </ListItemIcon>
