@@ -1,4 +1,4 @@
-import { Delete, DeleteOutline } from "@mui/icons-material";
+import { Delete, DeleteOutline, Edit, Payment } from "@mui/icons-material";
 import {
   Box,
   Button,
@@ -18,11 +18,16 @@ import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "../../../store";
 import { fetchMaterialById } from "../../../store/slices/materialSlice";
 import { Invoice, InvoiceItem, updateInvoiceStatus } from "../../../store/slices/invoiceSlice";
+import EditInvoiceModal from "./EditInvoiceModal";
+import PaymentModal from "./PaymentModal";
+import PaidStamp from "./PaidStamp";
 
 const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({ order, onClose }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { selectedMaterial, isLoading: materialLoading } = useSelector((state: RootState) => state.materials);
   const [materialDetails, setMaterialDetails] = useState<Record<string, any>>({});
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
 
   const getStatusText = (status: string) => {
     switch (status) {
@@ -107,6 +112,26 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
     }
   };
 
+  const handleEditInvoice = () => {
+    setEditModalOpen(true);
+  };
+
+  const handleEditSuccess = () => {
+    setEditModalOpen(false);
+    // Refresh the order data or close the modal
+    if (onClose) {
+      onClose();
+    }
+  };
+
+  const handlePaymentSuccess = () => {
+    setPaymentModalOpen(false);
+    // Refresh the order data or close the modal
+    if (onClose) {
+      onClose();
+    }
+  };
+
   // Use items instead of products
   const items = order.items || [];
   const tableRows = items.map((item: InvoiceItem, index: number) => {
@@ -144,16 +169,50 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
         transform: "translate(-50%, -50%)",
         width: "50%",
         bgcolor: "white",
-
         borderRadius: 2,
         boxShadow: 24,
         p: 4,
+        overflow: "hidden",
       }}
     >
       <Box sx={{ color: "black", display: "flex", flexDirection: "column" }}>
-        <Typography variant="h6" sx={{ m: 3 }}>
-          Chi tiết đơn hàng
-        </Typography>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", m: 3 }}>
+          <Typography variant="h6">
+            Chi tiết đơn hàng
+          </Typography>
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Button
+              variant="outlined"
+              startIcon={<Payment />}
+              onClick={() => setPaymentModalOpen(true)}
+              sx={{ 
+                color: "success.main",
+                borderColor: "success.main",
+                "&:hover": {
+                  backgroundColor: "success.light",
+                  color: "white"
+                }
+              }}
+            >
+              Thanh toán
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<Edit />}
+              onClick={handleEditInvoice}
+              sx={{ 
+                color: "primary.main",
+                borderColor: "primary.main",
+                "&:hover": {
+                  backgroundColor: "primary.light",
+                  color: "white"
+                }
+              }}
+            >
+              Chỉnh sửa
+            </Button>
+          </Box>
+        </Box>
         <Paper
           elevation={0}
           sx={{
@@ -222,6 +281,34 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
           <Typography variant="subtitle1">Tổng tiền </Typography>
           <Typography variant="subtitle1" color={"grey"}>
             {order.totalAmount?.toLocaleString() + ' VNĐ' || '0'}
+          </Typography>
+        </Paper>
+        <Paper
+          elevation={0}
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            width: "30%",
+            m: 3,
+          }}
+        >
+          <Typography variant="subtitle1">Đã thanh toán </Typography>
+          <Typography variant="subtitle1" color={"success.main"}>
+            {(order.paidAmount || 0).toLocaleString() + ' VNĐ'}
+          </Typography>
+        </Paper>
+        <Paper
+          elevation={0}
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            width: "30%",
+            m: 3,
+          }}
+        >
+          <Typography variant="subtitle1">Còn lại </Typography>
+          <Typography variant="subtitle1" color={"error.main"}>
+            {(order.remainingAmount || order.totalAmount || 0).toLocaleString() + ' VNĐ'}
           </Typography>
         </Paper>
         <Box>
@@ -331,6 +418,25 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
           </Paper>
         </Box>
       </Box>
+
+      {/* Paid Stamp */}
+      <PaidStamp visible={order.paymentStatus === 'paid'} />
+
+      {/* Edit Invoice Modal */}
+      <EditInvoiceModal
+        invoice={order}
+        open={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        onSuccess={handleEditSuccess}
+      />
+
+      {/* Payment Modal */}
+      <PaymentModal
+        invoice={order}
+        open={paymentModalOpen}
+        onClose={() => setPaymentModalOpen(false)}
+        onSuccess={handlePaymentSuccess}
+      />
     </Box>
   );
 }

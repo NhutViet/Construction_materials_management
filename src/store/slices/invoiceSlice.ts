@@ -20,14 +20,14 @@ export interface Invoice {
   customerAddress?: string;
   items: InvoiceItem[];
   subtotal: number;
-  taxRate: number;
-  taxAmount: number;
   discountRate: number;
   discountAmount: number;
   totalAmount: number;
   status: 'pending' | 'confirmed' | 'delivered' | 'cancelled';
   paymentMethod: 'cash' | 'online' | 'debt';
   paymentStatus: 'unpaid' | 'partial' | 'paid';
+  paidAmount: number;
+  remainingAmount: number;
   notes?: string;
   deliveryDate?: string;
   createdBy: string;
@@ -46,10 +46,11 @@ export interface CreateInvoiceDto {
     materialId: string;
     quantity: number;
   }[];
-  taxRate?: number;
   discountRate?: number;
   paymentMethod: 'cash' | 'online' | 'debt';
   paymentStatus?: 'unpaid' | 'partial' | 'paid';
+  paidAmount?: number;
+  remainingAmount?: number;
   notes?: string;
   deliveryDate?: string;
 }
@@ -62,9 +63,10 @@ export interface UpdateInvoiceDto {
     materialId: string;
     quantity: number;
   }[];
-  taxRate?: number;
   discountRate?: number;
   paymentMethod?: 'cash' | 'online' | 'debt';
+  paidAmount?: number;
+  remainingAmount?: number;
   notes?: string;
   deliveryDate?: string;
 }
@@ -76,7 +78,15 @@ export interface UpdateInvoiceStatusDto {
 
 export interface UpdatePaymentStatusDto {
   paymentStatus: 'unpaid' | 'partial' | 'paid';
+  paidAmount?: number;
+  remainingAmount?: number;
   notes?: string;
+}
+
+export interface ProcessPaymentDto {
+  amount: number;
+  notes?: string;
+  paymentMethod?: string;
 }
 
 export interface InvoiceQueryDto {
@@ -231,6 +241,18 @@ export const updatePaymentStatus = createAsyncThunk(
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to update payment status');
+    }
+  }
+);
+
+export const processPayment = createAsyncThunk(
+  'invoice/processPayment',
+  async ({ id, data }: { id: string; data: ProcessPaymentDto }, { rejectWithValue }) => {
+    try {
+      const response = await AxiosInstance().post(`/invoices/${id}/payment`, data);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to process payment');
     }
   }
 );
@@ -524,6 +546,31 @@ const invoiceSlice = createSlice({
         }
       })
       .addCase(updatePaymentStatus.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      });
+
+    // Process payment
+    builder
+      .addCase(processPayment.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(processPayment.fulfilled, (state, action: PayloadAction<Invoice>) => {
+        state.isLoading = false;
+        const index = state.invoices.findIndex(inv => inv._id === action.payload._id);
+        const allIndex = state.allInvoices.findIndex(inv => inv._id === action.payload._id);
+        if (index !== -1) {
+          state.invoices[index] = action.payload;
+        }
+        if (allIndex !== -1) {
+          state.allInvoices[allIndex] = action.payload;
+        }
+        if (state.selectedInvoice?._id === action.payload._id) {
+          state.selectedInvoice = action.payload;
+        }
+      })
+      .addCase(processPayment.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       });

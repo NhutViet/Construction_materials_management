@@ -74,9 +74,12 @@ export const loginUser = createAsyncThunk(
       const response: any = await AxiosInstance().post('/auth/login', credentials);
       console.log('Login response:', response);
       
-      // Kiểm tra response có đúng format không (vì Axios interceptor trả về res.data)
-      if (response && response.user && response.access_token) {
-        return response as LoginResponse;
+      // Trả về response.data thay vì toàn bộ response
+      const responseData = response.data || response;
+      
+      // Kiểm tra response có đúng format không
+      if (responseData && responseData.user && responseData.access_token) {
+        return responseData as LoginResponse;
       }
       return rejectWithValue('Invalid response format');
     } catch (error: any) {
