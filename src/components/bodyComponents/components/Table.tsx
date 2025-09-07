@@ -56,7 +56,7 @@ export const Table: React.FC<ReusableTableProps> = ({
   headerCellClassName = '',
   rowClassName = '',
   cellClassName = '',
-  itemsPerPage = 15,
+  itemsPerPage = 10,
   renderRowDetail,
   expandable = false,
   stickyHeader = false,

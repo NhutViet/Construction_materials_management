@@ -44,7 +44,6 @@ interface FormData {
   customerPhone: string;
   customerAddress: string;
   items: InvoiceItem[];
-  taxRate: number;
   discountRate: number;
   paymentMethod: 'cash' | 'online' | 'debt';
   paymentStatus: 'unpaid' | 'partial' | 'paid';
@@ -70,7 +69,6 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
     customerPhone: '',
     customerAddress: '',
     items: [],
-    taxRate: 10,
     discountRate: 0,
     paymentMethod: 'cash',
     paymentStatus: 'unpaid',
@@ -78,7 +76,14 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
     deliveryDate: ''
   });
 
-  const [errors, setErrors] = useState<Partial<FormData>>({});
+  const [errors, setErrors] = useState<{
+    customerName?: string;
+    customerPhone?: string;
+    customerAddress?: string;
+    items?: string;
+    discountRate?: string;
+    deliveryDate?: string;
+  }>({});
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
   const [itemQuantity, setItemQuantity] = useState<number>(1);
 
@@ -95,7 +100,14 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
   }, [dispatch, error]);
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<FormData> = {};
+    const newErrors: {
+      customerName?: string;
+      customerPhone?: string;
+      customerAddress?: string;
+      items?: string;
+      discountRate?: string;
+      deliveryDate?: string;
+    } = {};
 
     if (!formData.customerName.trim()) {
       newErrors.customerName = 'Tên khách hàng là bắt buộc';
@@ -103,6 +115,8 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
 
     if (!formData.customerPhone.trim()) {
       newErrors.customerPhone = 'Số điện thoại là bắt buộc';
+    } else if (!/^0\d{9}$/.test(formData.customerPhone.trim())) {
+      newErrors.customerPhone = 'Số điện thoại phải bắt đầu bằng 0 và có đúng 10 chữ số';
     }
 
     if (!formData.customerAddress.trim()) {
@@ -113,12 +127,12 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
       newErrors.items = 'Phải có ít nhất một sản phẩm';
     }
 
-    if (formData.taxRate < 0 || formData.taxRate > 100) {
-      newErrors.taxRate = 'Thuế phải từ 0-100%';
-    }
-
     if (formData.discountRate < 0 || formData.discountRate > 100) {
       newErrors.discountRate = 'Giảm giá phải từ 0-100%';
+    }
+
+    if (!formData.deliveryDate.trim()) {
+      newErrors.deliveryDate = 'Ngày giao hàng là bắt buộc';
     }
 
     setErrors(newErrors);
@@ -148,6 +162,21 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
       item => item.materialId === selectedMaterial._id
     );
 
+    let totalRequestedQuantity = itemQuantity;
+    if (existingItemIndex !== -1) {
+      totalRequestedQuantity += formData.items[existingItemIndex].quantity;
+    }
+
+    // Check inventory availability
+    if (totalRequestedQuantity > selectedMaterial.quantity) {
+      const errorMessage = `Không đủ tồn kho cho "${selectedMaterial.name}". Tồn kho hiện tại: ${selectedMaterial.quantity}, yêu cầu: ${totalRequestedQuantity}`;
+      setErrors(prev => ({
+        ...prev,
+        items: errorMessage
+      }));
+      return;
+    }
+
     if (existingItemIndex !== -1) {
       // Update existing item quantity
       const updatedItems = [...formData.items];
@@ -176,6 +205,14 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
       }));
     }
 
+    // Clear any previous inventory errors
+    if (errors.items) {
+      setErrors(prev => ({
+        ...prev,
+        items: undefined
+      }));
+    }
+
     // Reset selection
     setSelectedMaterial(null);
     setItemQuantity(1);
@@ -192,6 +229,19 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
     if (newQuantity <= 0) return;
 
     const updatedItems = [...formData.items];
+    const item = updatedItems[index];
+    
+    // Find the material to check available stock
+    const material = materials.find(m => m._id === item.materialId);
+    if (material && newQuantity > material.quantity) {
+      const errorMessage = `Không đủ tồn kho cho "${material.name}". Tồn kho hiện tại: ${material.quantity}, yêu cầu: ${newQuantity}`;
+      setErrors(prev => ({
+        ...prev,
+        items: errorMessage
+      }));
+      return;
+    }
+
     updatedItems[index].quantity = newQuantity;
     updatedItems[index].totalPrice = newQuantity * updatedItems[index].unitPrice;
 
@@ -199,15 +249,22 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
       ...prev,
       items: updatedItems
     }));
+
+    // Clear any previous inventory errors
+    if (errors.items) {
+      setErrors(prev => ({
+        ...prev,
+        items: undefined
+      }));
+    }
   };
 
   const calculateTotals = () => {
     const subtotal = formData.items.reduce((sum, item) => sum + item.totalPrice, 0);
-    const taxAmount = (subtotal * formData.taxRate) / 100;
     const discountAmount = (subtotal * formData.discountRate) / 100;
-    const totalAmount = subtotal + taxAmount - discountAmount;
+    const totalAmount = subtotal - discountAmount;
 
-    return { subtotal, taxAmount, discountAmount, totalAmount };
+    return { subtotal, discountAmount, totalAmount };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -218,7 +275,7 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
     }
 
     try {
-      const { subtotal, taxAmount, discountAmount, totalAmount } = calculateTotals();
+      const { subtotal, discountAmount, totalAmount } = calculateTotals();
 
       const invoiceData: CreateInvoiceDto = {
         customerName: formData.customerName,
@@ -228,12 +285,11 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
           materialId: item.materialId,
           quantity: item.quantity
         })),
-        taxRate: formData.taxRate,
         discountRate: formData.discountRate,
         paymentMethod: formData.paymentMethod,
         paymentStatus: formData.paymentStatus,
         notes: formData.notes,
-        deliveryDate: formData.deliveryDate || undefined
+        deliveryDate: formData.deliveryDate
       };
 
       await dispatch(createInvoice(invoiceData)).unwrap();
@@ -244,7 +300,7 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
     }
   };
 
-  const { subtotal, taxAmount, discountAmount, totalAmount } = calculateTotals();
+  const { subtotal, discountAmount, totalAmount } = calculateTotals();
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ p: 3 }}>
@@ -285,10 +341,17 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
             fullWidth
             label="Số Điện Thoại *"
             value={formData.customerPhone}
-            onChange={(e) => handleInputChange('customerPhone', e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              // Only allow digits and limit to 10 characters
+              if (/^\d*$/.test(value) && value.length <= 10) {
+                handleInputChange('customerPhone', value);
+              }
+            }}
             error={!!errors.customerPhone}
-            helperText={errors.customerPhone}
+            helperText={errors.customerPhone || 'Bắt đầu bằng số 0 và 10 chữ số'}
             placeholder="Nhập số điện thoại"
+            inputProps={{ maxLength: 10 }}
           />
         </Grid>
 
@@ -322,29 +385,50 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
                 {...params}
                 label="Chọn Sản Phẩm"
                 placeholder="Tìm kiếm sản phẩm..."
+                error={!!errors.items}
+                helperText={typeof errors.items === 'string' ? errors.items : ''}
               />
             )}
-            renderOption={(props, option) => (
-              <Box component="li" {...props}>
-                <Box>
-                  <Typography variant="body1">{option.name}</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {option.price.toLocaleString('vi-VN')}đ/{option.unit} - Còn: {option.quantity}
-                  </Typography>
+            renderOption={(props, option) => {
+              const isLowStock = option.quantity <= 10;
+              const isOutOfStock = option.quantity === 0;
+              
+              return (
+                <Box component="li" {...props}>
+                  <Box sx={{ width: '100%' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography variant="body1">{option.name}</Typography>
+                      <Chip
+                        label={isOutOfStock ? 'Hết hàng' : isLowStock ? 'Sắp hết' : 'Còn hàng'}
+                        color={isOutOfStock ? 'error' : isLowStock ? 'warning' : 'success'}
+                        size="small"
+                        variant="outlined"
+                      />
+                    </Box>
+                    <Typography variant="caption" color="text.secondary">
+                      {option.price.toLocaleString('vi-VN')}đ/{option.unit} - Còn: {option.quantity}
+                    </Typography>
+                  </Box>
                 </Box>
-              </Box>
-            )}
+              );
+            }}
+            getOptionDisabled={(option) => option.quantity === 0}
           />
         </Grid>
 
         <Grid item xs={12} md={3}>
           <TextField
             fullWidth
-            label="Số Lượng"
+            label="Số Lượng"         
             type="number"
             value={itemQuantity}
-            onChange={(e) => setItemQuantity(parseInt(e.target.value) || 1)}
-            inputProps={{ min: 1 }}
+            onChange={(e) => setItemQuantity(parseInt(e.target.value))}
+            inputProps={{ 
+              min: 1, 
+              max: selectedMaterial ? selectedMaterial.quantity : undefined 
+            }}
+            helperText={selectedMaterial ? `Tối đa: ${selectedMaterial.quantity}` : ''}
+            error={selectedMaterial && itemQuantity > selectedMaterial.quantity}
           />
         </Grid>
 
@@ -354,7 +438,7 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
             variant="outlined"
             startIcon={<AddIcon />}
             onClick={addItemToInvoice}
-            disabled={!selectedMaterial || itemQuantity <= 0}
+            disabled={!selectedMaterial || itemQuantity <= 0 || (selectedMaterial && itemQuantity > selectedMaterial.quantity)}
             sx={{ height: '56px' }}
           >
             Thêm Vào Hoá Đơn
@@ -377,43 +461,66 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {formData.items.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight="medium">
-                          {item.materialName}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="center">{item.unit}</TableCell>
-                      <TableCell align="center">
-                        <TextField
-                          type="number"
-                          value={item.quantity}
-                          onChange={(e) => updateItemQuantity(index, parseInt(e.target.value) || 1)}
-                          inputProps={{ min: 1, style: { textAlign: 'center' } }}
-                          size="small"
-                          sx={{ width: '80px' }}
-                        />
-                      </TableCell>
-                      <TableCell align="right">
-                        {item.unitPrice.toLocaleString('vi-VN')}đ
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2" fontWeight="medium">
-                          {item.totalPrice.toLocaleString('vi-VN')}đ
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="center">
-                        <IconButton
-                          color="error"
-                          size="small"
-                          onClick={() => removeItemFromInvoice(index)}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {formData.items.map((item, index) => {
+                    const material = materials.find(m => m._id === item.materialId);
+                    const isLowStock = material && material.quantity <= 10;
+                    const isOutOfStock = material && material.quantity === 0;
+                    
+                    return (
+                      <TableRow key={index}>
+                        <TableCell>
+                          <Box>
+                            <Typography variant="body2" fontWeight="medium">
+                              {item.materialName}
+                            </Typography>
+                            {material && (
+                              <Chip
+                                label={`Tồn kho: ${material.quantity}`}
+                                color={isOutOfStock ? 'error' : isLowStock ? 'warning' : 'success'}
+                                size="small"
+                                variant="outlined"
+                                sx={{ mt: 0.5 }}
+                              />
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell align="center">{item.unit}</TableCell>
+                        <TableCell align="center">
+                          <TextField
+                            type="number"
+                            value={item.quantity}
+                            onChange={(e) => updateItemQuantity(index, parseInt(e.target.value) || 1)}
+                            inputProps={{ 
+                              min: 1, 
+                              max: material ? material.quantity : undefined,
+                              style: { textAlign: 'center' } 
+                            }}
+                            size="small"
+                            sx={{ width: '80px' }}
+                            error={material && item.quantity > material.quantity}
+                            helperText={material && item.quantity > material.quantity ? 'Vượt quá tồn kho' : ''}
+                          />
+                        </TableCell>
+                        <TableCell align="right">
+                          {item.unitPrice.toLocaleString('vi-VN')}đ
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2" fontWeight="medium">
+                            {item.totalPrice.toLocaleString('vi-VN')}đ
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          <IconButton
+                            color="error"
+                            size="small"
+                            onClick={() => removeItemFromInvoice(index)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -425,19 +532,6 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
           <Typography variant="subtitle1" color="primary" gutterBottom sx={{ mt: 2 }}>
             Cài Đặt Hoá Đơn
           </Typography>
-        </Grid>
-
-        <Grid item xs={12} md={3}>
-          <TextField
-            fullWidth
-            label="Thuế (%)"
-            type="number"
-            value={formData.taxRate}
-            onChange={(e) => handleInputChange('taxRate', parseFloat(e.target.value) || 0)}
-            error={!!errors.taxRate}
-            helperText={errors.taxRate}
-            inputProps={{ min: 0, max: 100, step: 0.1 }}
-          />
         </Grid>
 
         <Grid item xs={12} md={3}>
@@ -498,11 +592,14 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
         <Grid item xs={12} md={6}>
           <TextField
             fullWidth
-            label="Ngày Giao Hàng"
+            label="Ngày Giao Hàng *"
             type="date"
             value={formData.deliveryDate}
             onChange={(e) => handleInputChange('deliveryDate', e.target.value)}
+            error={!!errors.deliveryDate}
+            helperText={errors.deliveryDate}
             InputLabelProps={{ shrink: true }}
+            required
           />
         </Grid>
 
@@ -518,10 +615,6 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                     <Typography>Tổng tiền hàng:</Typography>
                     <Typography>{subtotal.toLocaleString('vi-VN')}đ</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography>Thuế ({formData.taxRate}%):</Typography>
-                    <Typography>{taxAmount.toLocaleString('vi-VN')}đ</Typography>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                     <Typography>Giảm giá ({formData.discountRate}%):</Typography>

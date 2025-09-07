@@ -1,5 +1,5 @@
 import { Avatar, Box, Button, Modal, Typography, Chip, CircularProgress } from "@mui/material";
-import { DataGrid } from "@mui/x-data-grid";
+import { DataGrid, GridPagination } from "@mui/x-data-grid";
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "../../../store";
@@ -209,6 +209,7 @@ export default function OrderList() {
           borderLeft: 0,
           borderRight: 0,
           borderRadius: 0,
+          height: 'calc(100vh - 300px)', // Đảm bảo có chiều cao cố định
           '& .MuiDataGrid-row': {
             cursor: 'pointer',
           },
@@ -222,20 +223,68 @@ export default function OrderList() {
             fontSize: '16px',
             fontWeight: 'bold',
           },
+          '& .MuiDataGrid-footerContainer': {
+            borderTop: '1px solid #e0e0e0',
+            backgroundColor: '#f5f5f5',
+            minHeight: '52px', // Đảm bảo footer có chiều cao tối thiểu
+            justifyContent: 'center', // Căn giữa pagination
+          },
+          '& .MuiTablePagination-root': {
+            fontSize: '14px',
+            minHeight: '52px',
+            justifyContent: 'center', // Căn giữa pagination
+            width: '100%',
+          },
+          '& .MuiTablePagination-toolbar': {
+            minHeight: '52px',
+            justifyContent: 'center', // Căn giữa toolbar
+            width: '100%',
+          },
+          '& .MuiTablePagination-selectLabel': {
+            fontSize: '14px',
+          },
+          '& .MuiTablePagination-displayedRows': {
+            fontSize: '14px',
+          },
         }}
         rows={invoices}
         columns={columns}
         getRowId={(row) => row._id}
         initialState={{
           pagination: {
-            paginationModel: { page: 0, pageSize: 15 },
+            paginationModel: { page: 0, pageSize: 10 },
           },
         }}
-        pageSizeOptions={[10, 15, 20, 30]}
+        pageSizeOptions={[10, 15, 25, 50]}
         rowSelection={false}
-        pagination
+        pagination={true}
         paginationMode="client"
+        disableRowSelectionOnClick
         onRowClick={(params) => handleOrderDetail(params.row)}
+        slots={{
+          pagination: GridPagination,
+        }}
+        slotProps={{
+          pagination: {
+            labelRowsPerPage: 'Số dòng mỗi trang:',
+            labelDisplayedRows: ({ from, to, count }) => 
+              `${from}-${to} của ${count !== -1 ? count : `hơn ${to}`}`,
+            showFirstButton: true,
+            showLastButton: true,
+            getItemAriaLabel: (type) => {
+              if (type === 'first') {
+                return 'Trang đầu tiên';
+              }
+              if (type === 'last') {
+                return 'Trang cuối cùng';
+              }
+              if (type === 'next') {
+                return 'Trang tiếp theo';
+              }
+              return 'Trang trước';
+            },
+          },
+        }}
       />
       <Modal open={open} onClose={handleClose}>
         <Box>
