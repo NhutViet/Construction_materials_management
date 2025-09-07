@@ -7,6 +7,9 @@ interface User {
   username: string;
   fullname: string;
   email?: string;
+  phoneNumber?: string;
+  bankNumber?: string;
+  bankName?: string;
   role?: 'admin' | 'manager' | 'staff';
   accessToken?: string;
 }
@@ -16,11 +19,19 @@ interface LoginResponse {
   access_token: string;
 }
 
+interface UpdateProfileDto {
+  fullname: string;
+  phoneNumber?: string;
+  bankNumber?: string;
+  bankName?: string;
+}
+
 interface AuthState {
   user: User | null;
   accessToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isProfileLoading: boolean;
   error: string | null;
 }
 
@@ -61,6 +72,7 @@ const getInitialState = (): AuthState => {
     accessToken: savedToken,
     isAuthenticated: !!(savedUser && savedToken),
     isLoading: false,
+    isProfileLoading: false,
     error: null,
   };
 };
@@ -88,6 +100,64 @@ export const loginUser = createAsyncThunk(
         return rejectWithValue(error.response.data.message);
       }
       return rejectWithValue(error instanceof Error ? error.message : 'Login failed');
+    }
+  }
+);
+
+export const getUserProfile = createAsyncThunk(
+  'auth/getUserProfile',
+  async (_, { rejectWithValue, getState }) => {
+    try {
+      const state = getState() as { auth: AuthState };
+      const token = state.auth.accessToken;
+      
+      if (!token) {
+        return rejectWithValue('No access token available');
+      }
+
+      const response: any = await AxiosInstance().get('/auth/profile', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      const responseData = response.data || response;
+      return responseData as User;
+    } catch (error: any) {
+      console.error('Get profile error details:', error);
+      if (error.response?.data?.message) {
+        return rejectWithValue(error.response.data.message);
+      }
+      return rejectWithValue(error instanceof Error ? error.message : 'Failed to get profile');
+    }
+  }
+);
+
+export const updateUserProfile = createAsyncThunk(
+  'auth/updateUserProfile',
+  async (updateData: UpdateProfileDto, { rejectWithValue, getState }) => {
+    try {
+      const state = getState() as { auth: AuthState };
+      const token = state.auth.accessToken;
+      
+      if (!token) {
+        return rejectWithValue('No access token available');
+      }
+
+      const response: any = await AxiosInstance().put('/auth/profile', updateData, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      const responseData = response.data || response;
+      return responseData as User;
+    } catch (error: any) {
+      console.error('Update profile error details:', error);
+      if (error.response?.data?.message) {
+        return rejectWithValue(error.response.data.message);
+      }
+      return rejectWithValue(error instanceof Error ? error.message : 'Failed to update profile');
     }
   }
 );
@@ -133,6 +203,16 @@ const authSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    updateUserProfileSuccess: (state, action: PayloadAction<User>) => {
+      state.user = { ...state.user, ...action.payload };
+      state.isProfileLoading = false;
+      state.error = null;
+      
+      // Update localStorage
+      if (state.user) {
+        saveToStorage('user', state.user);
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -159,9 +239,45 @@ const authSlice = createSlice({
       .addCase(loginUser.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
+      })
+      .addCase(getUserProfile.pending, (state) => {
+        state.isProfileLoading = true;
+        state.error = null;
+      })
+      .addCase(getUserProfile.fulfilled, (state, action) => {
+        state.isProfileLoading = false;
+        state.user = { ...state.user, ...action.payload };
+        state.error = null;
+        
+        // Update localStorage
+        if (state.user) {
+          saveToStorage('user', state.user);
+        }
+      })
+      .addCase(getUserProfile.rejected, (state, action) => {
+        state.isProfileLoading = false;
+        state.error = action.payload as string;
+      })
+      .addCase(updateUserProfile.pending, (state) => {
+        state.isProfileLoading = true;
+        state.error = null;
+      })
+      .addCase(updateUserProfile.fulfilled, (state, action) => {
+        state.isProfileLoading = false;
+        state.user = { ...state.user, ...action.payload };
+        state.error = null;
+        
+        // Update localStorage
+        if (state.user) {
+          saveToStorage('user', state.user);
+        }
+      })
+      .addCase(updateUserProfile.rejected, (state, action) => {
+        state.isProfileLoading = false;
+        state.error = action.payload as string;
       });
   },
 });
 
-export const { loginStart, loginSuccess, loginFailure, logout, clearError } = authSlice.actions;
+export const { loginStart, loginSuccess, loginFailure, logout, clearError, updateUserProfileSuccess } = authSlice.actions;
 export default authSlice.reducer;
