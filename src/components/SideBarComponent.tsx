@@ -68,8 +68,8 @@ const SideBarComponent: React.FC = () => {
       component: <TrendingUpOutlined fontSize="medium" color="primary" />,
     },
     {
-      title: "Báo cáo",
-      path: "reports",
+      title: "Nhập hàng",
+      path: "stock-in",
       component: <DescriptionOutlined fontSize="medium" color="primary" />,
     },
     {
