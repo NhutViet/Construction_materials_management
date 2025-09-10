@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import  AxiosInstance  from '../AxiosInstance';
+import { matchesSearchTerm } from '../../utils/vietnameseUtils';
 
 // Types matching the backend
 export interface InvoiceItem {
@@ -781,13 +782,13 @@ export const selectFilteredInvoices = (state: { invoice: InvoiceState }) => {
   const { allInvoices, filters } = state.invoice;
   
   return allInvoices.filter(invoice => {
-    // Filter by invoice number
+    // Filter by invoice number - with Vietnamese diacritics support
     const matchesInvoiceNumber = !filters.invoiceNumber || 
-      invoice.invoiceNumber.toLowerCase().includes(filters.invoiceNumber.toLowerCase());
+      matchesSearchTerm(invoice.invoiceNumber, filters.invoiceNumber);
     
-    // Filter by customer name
+    // Filter by customer name - with Vietnamese diacritics support
     const matchesCustomerName = !filters.customerName || 
-      invoice.customerName.toLowerCase().includes(filters.customerName.toLowerCase());
+      matchesSearchTerm(invoice.customerName, filters.customerName);
     
     // Filter by status
     const matchesStatus = !filters.status || invoice.status === filters.status;

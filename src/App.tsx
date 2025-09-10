@@ -13,7 +13,7 @@ import Inventory from "./components/bodyComponents/inventory/Inventory";
 import Customer from "./components/bodyComponents/customer/Customer";
 import Revenue from "./components/bodyComponents/revenue/Revenue";
 import Growth from "./components/bodyComponents/growth/Growth";
-import Report from "./components/bodyComponents/report/Report";
+import StockIn from "./components/bodyComponents/Stock-in/Stock-in";
 import Setting from "./components/bodyComponents/Settings/Setting";
 import Order from "./components/bodyComponents/order/Order";
 import Profile from "./components/bodyComponents/profile/Profile";
@@ -67,7 +67,7 @@ const App: React.FC = () => {
           <Route path="/dashboard/customers" element={<Customer />}></Route>
           <Route path="/dashboard/revenue" element={<Revenue />}></Route>
           <Route path="/dashboard/growth" element={<Growth />}></Route>
-          <Route path="/dashboard/reports" element={<Report />}></Route>
+          <Route path="/dashboard/stock-in" element={<StockIn />}></Route>
           <Route path="/dashboard/settings" element={<Setting />}></Route>
           <Route path="/dashboard/profile" element={<Profile />}></Route>
         </Route>
