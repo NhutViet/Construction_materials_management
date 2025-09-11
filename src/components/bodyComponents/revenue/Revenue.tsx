@@ -1,73 +1,161 @@
-import React, { Component } from "react";
+import React, { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "../../../store";
+import { fetchRevenueAnalytics, fetchPaymentAnalytics, fetchInventoryAnalytics } from "../../../store/slices/analyticsSlice";
 import RevenueCard from "./RevenueCard";
-import { Box, Grid, Paper } from "@mui/material";
+import { Box, Grid, CircularProgress, Alert } from "@mui/material";
 import RevenueCostChart from "./RevenueCostChart";
 import BestSelledProductChart from "./BestSelledProductChart";
 import BestSelledProductChartBar from "./BestSelledProductChartBar";
 
-export default class Revenue extends Component {
-  render() {
-    const revenuCards = [
+const Revenue: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { 
+    revenueAnalytics, 
+    paymentAnalytics, 
+    inventoryAnalytics,
+    isRevenueLoading,
+    isPaymentLoading,
+    isInventoryLoading,
+    error 
+  } = useSelector((state: RootState) => state.analytics);
+
+  useEffect(() => {
+    // Fetch analytics data when component mounts
+    dispatch(fetchRevenueAnalytics({}));
+    dispatch(fetchPaymentAnalytics({}));
+    dispatch(fetchInventoryAnalytics());
+  }, [dispatch]);
+
+  // Calculate revenue cards data from API
+  const getRevenueCards = () => {
+    if (!revenueAnalytics || !paymentAnalytics) {
+      return [
+        {
+          isMoney: true,
+          number: "0",
+          percentage: 0,
+          upOrDown: "up",
+          color: "green",
+          title: "Tổng doanh thu",
+          subTitle: "so với năm trước",
+        },
+        {
+          isMoney: true,
+          number: "0",
+          percentage: 0,
+          upOrDown: "up",
+          color: "green",
+          title: "Doanh thu trung bình",
+          subTitle: "mỗi đơn hàng",
+        },
+        {
+          isMoney: true,
+          number: "0",
+          percentage: 0,
+          upOrDown: "down",
+          color: "red",
+          title: "Tổng nợ",
+          subTitle: "cần thu",
+        },
+        {
+          isMoney: true,
+          number: "0",
+          percentage: undefined,
+          title: "Tỷ lệ thanh toán",
+          subTitle: "đã thanh toán",
+        },
+      ];
+    }
+
+    const totalRevenue = revenueAnalytics.totalRevenue || 0;
+    const avgOrderValue = revenueAnalytics.averageOrderValue?.avgOrderValue || 0;
+    const totalDebt = paymentAnalytics.summary?.totalDebt || 0;
+    const paymentRate = paymentAnalytics.summary?.paymentRate || 0;
+    const revenueGrowth = revenueAnalytics.revenueGrowth?.growthRate || 0;
+
+    return [
       {
         isMoney: true,
-        number: "23 000",
-        percentage: 55,
-        upOrDown: "up",
-        color: "green",
-        title: "Total Sales This Year",
-        subTitle: "vs prev year",
+        number: totalRevenue.toLocaleString('vi-VN'),
+        percentage: Math.abs(revenueGrowth),
+        upOrDown: revenueGrowth >= 0 ? "up" : "down",
+        color: revenueGrowth >= 0 ? "green" : "red",
+        title: "Tổng doanh thu",
+        subTitle: "so với năm trước",
       },
       {
         isMoney: true,
-        number: "3500",
-        percentage: 70,
+        number: avgOrderValue.toLocaleString('vi-VN'),
+        percentage: undefined,
         upOrDown: "up",
         color: "green",
-        title: "Revenue This Year",
-        subTitle: "vs prev year",
+        title: "Giá trị đơn hàng TB",
+        subTitle: "mỗi đơn hàng",
       },
       {
         isMoney: true,
-        number: "2000",
-        percentage: 12,
+        number: totalDebt.toLocaleString('vi-VN'),
+        percentage: undefined,
         upOrDown: "down",
         color: "red",
-        title: "Cost This Year",
-        subTitle: "vs prev year",
+        title: "Tổng nợ",
+        subTitle: "cần thu",
       },
       {
-        isMoney: true,
-        number: "98 000",
+        isMoney: false,
+        number: `${paymentRate.toFixed(1)}%`,
         percentage: undefined,
-        title: "Revenue Total",
-        subTitle: "vs prev year",
+        title: "Tỷ lệ thanh toán",
+        subTitle: "đã thanh toán",
       },
     ];
+  };
+
+  if (error) {
     return (
       <Box sx={{ p: 3, mx: 3 }}>
-        <Grid container sx={{ mx: 4 }}>
-          {revenuCards.map((card) => (
-            <Grid item md={3}>
-              <Box m={4}>
-                <RevenueCard card={card} />
-              </Box>
-            </Grid>
-          ))}
-        </Grid>
-        <Grid container sx={{ mx: 4 }}>
-          <Grid item md={12}>
-            <RevenueCostChart />
-          </Grid>
-        </Grid>
-        <Grid container sx={{ mx: 4 }}>
-          <Grid item md={6}>
-            <BestSelledProductChart />
-          </Grid>
-          <Grid item md={6}>
-            <BestSelledProductChartBar />
-          </Grid>
-        </Grid>
+        <Alert severity="error">{error}</Alert>
       </Box>
     );
   }
-}
+
+  if (isRevenueLoading || isPaymentLoading || isInventoryLoading) {
+    return (
+      <Box sx={{ p: 3, mx: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  const revenueCards = getRevenueCards();
+
+  return (
+    <Box sx={{ p: 3, mx: 3 }}>
+      <Grid container sx={{ mx: 4 }}>
+        {revenueCards.map((card, index) => (
+          <Grid item md={3} key={index}>
+            <Box m={4}>
+              <RevenueCard card={card} />
+            </Box>
+          </Grid>
+        ))}
+      </Grid>
+      <Grid container sx={{ mx: 4 }}>
+        <Grid item md={12}>
+          <RevenueCostChart revenueData={revenueAnalytics} />
+        </Grid>
+      </Grid>
+      <Grid container sx={{ mx: 4 }}>
+        <Grid item md={6}>
+          <BestSelledProductChart inventoryData={inventoryAnalytics} />
+        </Grid>
+        <Grid item md={6}>
+          <BestSelledProductChartBar inventoryData={inventoryAnalytics} />
+        </Grid>
+      </Grid>
+    </Box>
+  );
+};
+
+export default Revenue;

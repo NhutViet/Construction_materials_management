@@ -1,44 +1,59 @@
 import React, { useEffect, useState } from "react";
 import ApexCharts from "react-apexcharts";
 import { Box } from "@mui/material";
+import { RevenueAnalytics } from "../../../store/slices/analyticsSlice";
 
-const RevenueCostChart: React.FC = () => {
-  const [channelData, setChannelData] = useState([]);
+interface RevenueCostChartProps {
+  revenueData?: RevenueAnalytics | null;
+}
+
+const RevenueCostChart: React.FC<RevenueCostChartProps> = ({ revenueData }) => {
+  const [chartData, setChartData] = useState([]);
 
   useEffect(() => {
-    setChannelData([
-      {
-        name: "Revenue",
-        type: "column",
-        data: [141, 250, 260, 270, 300, 330, 360, 400, 420, 1000, 1300, 1600],
-      },
-      {
-        name: "Cost",
-        type: "column",
-        data: [341, 350, 460, 370, 400, 140, 150, 120, 220, 700, 300, 600],
-      },
-    ]);
-
-    return () => {
-      setChannelData([]);
-    };
-  }, []);
-
-  let totalArray = [];
-  const total = channelData.forEach((value) => {
-    const data = value.data;
-    if (totalArray.length === 0) totalArray = [...data];
-    else {
-      data.forEach((val, index) => (totalArray[index] += val));
+    if (revenueData?.revenueByMonth) {
+      // Process revenue data by month
+      const revenueDataArray = revenueData.revenueByMonth.map(item => item.revenue);
+      
+      // For cost data, we'll use a placeholder since it's not in the revenue analytics
+      // In a real scenario, you might want to fetch cost data separately
+      const costDataArray = revenueData.revenueByMonth.map(() => 0);
+      
+      setChartData([
+        {
+          name: "Doanh thu",
+          type: "column",
+          data: revenueDataArray,
+        },
+        {
+          name: "Chi phí",
+          type: "column",
+          data: costDataArray,
+        },
+      ]);
+    } else {
+      // Fallback data
+      setChartData([
+        {
+          name: "Doanh thu",
+          type: "column",
+          data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        },
+        {
+          name: "Chi phí",
+          type: "column",
+          data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        },
+      ]);
     }
-  });
+  }, [revenueData]);
 
-  const options3 = {
+  const options = {
     colors: ["#00D100", "#FF2E2E"],
     chart: {
-      id: "basic-bar",
-      type: "bar",
-      stacked: false, //one on top of another
+      id: "revenue-cost-chart",
+      type: "bar" as const,
+      stacked: false,
     },
     dataLabels: {
       enabled: false,
@@ -49,7 +64,7 @@ const RevenueCostChart: React.FC = () => {
       offsetY: 0,
     },
     title: {
-      text: "Cost & Revenue over Year",
+      text: "Doanh thu & Chi phí theo tháng",
     },
     plotOptions: {
       bar: {
@@ -62,29 +77,32 @@ const RevenueCostChart: React.FC = () => {
     },
     xaxis: {
       categories: [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aut",
-        "Spt",
-        "Oct",
-        "Nov",
-        "Dec",
+        "T1", "T2", "T3", "T4", "T5", "T6",
+        "T7", "T8", "T9", "T10", "T11", "T12"
       ],
+    },
+    yaxis: {
+      labels: {
+        formatter: function (value: number) {
+          return value.toLocaleString('vi-VN') + ' VNĐ';
+        }
+      }
     },
     tooltip: {
       fixed: {
         enabled: true,
-        position: "topLeft", // topRight, topLeft, bottomRight, bottomLeft
+        position: "topLeft",
         offsetY: 30,
         offsetX: 60,
       },
+      y: {
+        formatter: function (value: number) {
+          return value.toLocaleString('vi-VN') + ' VNĐ';
+        }
+      }
     },
   };
+
   return (
     <Box
       sx={{
@@ -96,8 +114,8 @@ const RevenueCostChart: React.FC = () => {
       }}
     >
       <ApexCharts
-        options={options3}
-        series={channelData}
+        options={options}
+        series={chartData}
         type="bar"
         width="100%"
         height="320"
