@@ -1,8 +1,7 @@
-import { Delete, DeleteOutline, Edit, Payment } from "@mui/icons-material";
+import { Edit, Payment, QrCode as QrCodeIcon } from "@mui/icons-material";
 import {
   Box,
   Button,
-  IconButton,
   Paper,
   Table,
   TableBody,
@@ -20,6 +19,7 @@ import { fetchMaterialById } from "../../../store/slices/materialSlice";
 import { Invoice, InvoiceItem, updateInvoiceStatus } from "../../../store/slices/invoiceSlice";
 import EditInvoiceModal from "./EditInvoiceModal";
 import PaymentModal from "./PaymentModal";
+import VietQRModal from "./VietQRModal";
 import PaidStamp from "./PaidStamp";
 
 const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({ order, onClose }) => {
@@ -28,6 +28,7 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
   const [materialDetails, setMaterialDetails] = useState<Record<string, any>>({});
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [vietQRModalOpen, setVietQRModalOpen] = useState(false);
 
   const getStatusText = (status: string) => {
     switch (status) {
@@ -83,14 +84,6 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
     }
   }, [order, dispatch, materialDetails]);
 
-  const handleDeleteProductFromOrder = (orderId: string, materialId: string) => {
-    console.log(
-      "delete the material : ",
-      materialId,
-      " from the order ",
-      orderId
-    );
-  };
 
   const handleStatusChange = async (newStatus: 'pending' | 'confirmed' | 'delivered' | 'cancelled') => {
     if (!order) return;
@@ -132,6 +125,14 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
     }
   };
 
+  const handleVietQRSuccess = () => {
+    setVietQRModalOpen(false);
+    // Refresh the order data or close the modal
+    if (onClose) {
+      onClose();
+    }
+  };
+
   // Use items instead of products
   const items = order.items || [];
   const tableRows = items.map((item: InvoiceItem, index: number) => {
@@ -147,15 +148,6 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
         <TableCell>{item.totalPrice?.toLocaleString() + ' VNĐ' || '0'}</TableCell>
         <TableCell>
           {material ? material.quantity : 'N/A'}
-        </TableCell>
-        <TableCell>
-          <IconButton
-            onClick={() =>
-              handleDeleteProductFromOrder(order._id, item.materialId)
-            }
-          >
-            <DeleteOutline color="error" />
-          </IconButton>
         </TableCell>
       </TableRow>
     );
@@ -181,36 +173,55 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
             Chi tiết đơn hàng
           </Typography>
           <Box sx={{ display: "flex", gap: 1 }}>
-            <Button
-              variant="outlined"
-              startIcon={<Payment />}
-              onClick={() => setPaymentModalOpen(true)}
-              sx={{ 
-                color: "success.main",
-                borderColor: "success.main",
-                "&:hover": {
-                  backgroundColor: "success.light",
-                  color: "white"
-                }
-              }}
-            >
-              Thanh toán
-            </Button>
-            <Button
-              variant="outlined"
-              startIcon={<Edit />}
-              onClick={handleEditInvoice}
-              sx={{ 
-                color: "primary.main",
-                borderColor: "primary.main",
-                "&:hover": {
-                  backgroundColor: "primary.light",
-                  color: "white"
-                }
-              }}
-            >
-              Chỉnh sửa
-            </Button>
+            {order.paymentStatus !== 'paid' && order.status !== 'cancelled' && (
+              <>
+                <Button
+                  variant="outlined"
+                  startIcon={<Payment />}
+                  onClick={() => setPaymentModalOpen(true)}
+                  sx={{ 
+                    color: "success.main",
+                    borderColor: "success.main",
+                    "&:hover": {
+                      backgroundColor: "success.light",
+                      color: "white"
+                    }
+                  }}
+                >
+                  Thanh toán
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<QrCodeIcon />}
+                  onClick={() => setVietQRModalOpen(true)}
+                  sx={{ 
+                    color: "info.main",
+                    borderColor: "info.main",
+                    "&:hover": {
+                      backgroundColor: "info.light",
+                      color: "white"
+                    }
+                  }}
+                >
+                  VietQR
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<Edit />}
+                  onClick={handleEditInvoice}
+                  sx={{ 
+                    color: "primary.main",
+                    borderColor: "primary.main",
+                    "&:hover": {
+                      backgroundColor: "primary.light",
+                      color: "white"
+                    }
+                  }}
+                >
+                  Chỉnh sửa
+                </Button>
+              </>
+            )}
           </Box>
         </Box>
         <Paper
@@ -322,14 +333,13 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
                   <TableCell>Đơn giá</TableCell>
                   <TableCell>Thành tiền</TableCell>
                   <TableCell>Tồn kho</TableCell>
-                  <TableCell>Thao tác</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {/* loop through the items list */}
                 {materialLoading ? (
                   <TableRow>
-                    <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
+                    <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4 }}>
                       <CircularProgress size={24} />
                       <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                         Đang tải chi tiết vật liệu...
@@ -338,7 +348,7 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
                   </TableRow>
                 ) : tableRows.length > 0 ? tableRows : (
                   <TableRow>
-                    <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
+                    <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4 }}>
                       <Typography variant="body2" color="text.secondary">
                         Không tìm thấy sản phẩm nào trong đơn hàng này
                       </Typography>
@@ -369,7 +379,7 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
                 "&:hover": { bgcolor: "#f57c00" }
               }}
               onClick={() => handleStatusChange('pending')}
-              disabled={order.status === 'pending' || order.status === 'cancelled'}
+              disabled={order.status === 'pending' || order.status === 'cancelled' || order.status === 'delivered'}
             >
               Chờ xử lý
             </Button>
@@ -383,7 +393,7 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
                 "&:hover": { bgcolor: "#1976d2" }
               }}
               onClick={() => handleStatusChange('confirmed')}
-              disabled={order.status === 'confirmed' || order.status === 'cancelled'}
+              disabled={order.status === 'confirmed' || order.status === 'cancelled' || order.status === 'delivered'}
             >
               Đã xác nhận
             </Button>
@@ -411,7 +421,7 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
                 "&:hover": { bgcolor: "#d32f2f" }
               }}
               onClick={() => handleStatusChange('cancelled')}
-              disabled={order.status === 'cancelled'}
+              disabled={order.status === 'cancelled' || order.status === 'delivered'}
             >
               Hủy đơn
             </Button>
@@ -436,6 +446,14 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
         open={paymentModalOpen}
         onClose={() => setPaymentModalOpen(false)}
         onSuccess={handlePaymentSuccess}
+      />
+
+      {/* VietQR Modal */}
+      <VietQRModal
+        invoice={order}
+        open={vietQRModalOpen}
+        onClose={() => setVietQRModalOpen(false)}
+        onSuccess={handleVietQRSuccess}
       />
     </Box>
   );

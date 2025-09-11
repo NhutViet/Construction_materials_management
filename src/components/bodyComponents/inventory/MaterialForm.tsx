@@ -33,9 +33,6 @@ interface FormData {
   unit: string;
   supplier: string;
   description: string;
-  minStock: number;
-  maxStock: number;
-  location: string;
   isActive: boolean;
 }
 
@@ -48,16 +45,13 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
     category: '',
     price: 0,
     quantity: 0,
-    unit: 'pcs',
+    unit: '',
     supplier: '',
     description: '',
-    minStock: 0,
-    maxStock: 0,
-    location: '',
     isActive: true,
   });
 
-  const [errors, setErrors] = useState<Partial<FormData>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Predefined categories and units
   const categories = [
@@ -67,11 +61,12 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
     'Vật liệu trang trí',
     'Công cụ',
     'An toàn lao động',
+    'Vật liệu nội thất',
     'Khác'
   ];
 
   const units = [
-    'pcs', 'kg', 'm', 'm²', 'm³', 'lít', 'thùng', 'cuộn', 'tấm', 'bộ'
+    'viên', 'kg', 'm', 'm²', 'm³', 'lít', 'thùng', 'cuộn', 'tấm', 'bộ',"bao","cái"
   ];
 
   useEffect(() => {
@@ -84,9 +79,6 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
         unit: material.unit || 'pcs',
         supplier: material.supplier || '',
         description: material.description || '',
-        minStock: material.minStock || 0,
-        maxStock: material.maxStock || 0,
-        location: material.location || '',
         isActive: material.isActive !== undefined ? material.isActive : true,
       });
     }
@@ -99,7 +91,7 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
   }, [dispatch, error]);
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<FormData> = {};
+    const newErrors: Record<string, string> = {};
 
     if (!formData.name.trim()) {
       newErrors.name = 'Tên sản phẩm là bắt buộc';
@@ -125,17 +117,6 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
       newErrors.supplier = 'Nhà cung cấp là bắt buộc';
     }
 
-    if (formData.minStock < 0) {
-      newErrors.minStock = 'Tồn kho tối thiểu không được âm';
-    }
-
-    if (formData.maxStock < 0) {
-      newErrors.maxStock = 'Tồn kho tối đa không được âm';
-    }
-
-    if (formData.minStock > formData.maxStock && formData.maxStock > 0) {
-      newErrors.maxStock = 'Tồn kho tối đa phải lớn hơn tồn kho tối thiểu';
-    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -297,46 +278,6 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
           </FormControl>
         </Grid>
 
-        {/* Stock Management */}
-        <Grid item xs={12}>
-          <Typography variant="subtitle1" color="primary" gutterBottom sx={{ mt: 2 }}>
-            Quản Lý Tồn Kho
-          </Typography>
-        </Grid>
-
-        <Grid item xs={12} md={4}>
-          <TextField
-            fullWidth
-            label="Tồn Kho Tối Thiểu"
-            type="number"
-            value={formData.minStock}
-            onChange={(e) => handleInputChange('minStock', parseInt(e.target.value) || 0)}
-            error={!!errors.minStock}
-            helperText={errors.minStock}
-          />
-        </Grid>
-
-        <Grid item xs={12} md={4}>
-          <TextField
-            fullWidth
-            label="Tồn Kho Tối Đa"
-            type="number"
-            value={formData.maxStock}
-            onChange={(e) => handleInputChange('maxStock', parseInt(e.target.value) || 0)}
-            error={!!errors.maxStock}
-            helperText={errors.maxStock}
-          />
-        </Grid>
-
-        <Grid item xs={12} md={4}>
-          <TextField
-            fullWidth
-            label="Vị Trí Lưu Trữ"
-            value={formData.location}
-            onChange={(e) => handleInputChange('location', e.target.value)}
-            placeholder="Ví dụ: Kho A, Tầng 1"
-          />
-        </Grid>
 
         {/* Supplier and Status */}
         <Grid item xs={12}>

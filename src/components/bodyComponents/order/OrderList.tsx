@@ -139,14 +139,14 @@ export default function OrderList() {
       ),
     },
     {
-      field: "totalAmount",
-      headerName: "Tổng tiền",
+      field: "remainingAmount",
+      headerName: "Số tiền còn lại",
       flex: 1,
       minWidth: 120,
-      description: "Tổng số tiền hóa đơn",
+      description: "Số tiền còn lại phải thanh toán",
       renderCell: (params) => (
         <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '16px' }}>
-          {params.row.totalAmount?.toLocaleString() + ' VNĐ' || '0'}
+          {params.row.remainingAmount?.toLocaleString() + ' VNĐ' || '0'}
         </Typography>
       ),
     },
