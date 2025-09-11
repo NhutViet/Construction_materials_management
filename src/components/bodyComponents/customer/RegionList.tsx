@@ -10,19 +10,19 @@ import {
 } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import { RootState } from '../../../store';
-import { Person, Phone, Email, AttachMoney, Receipt } from '@mui/icons-material';
+import { LocationOn, People, AttachMoney, Receipt, TrendingUp } from '@mui/icons-material';
 
-const CustomerList: React.FC = () => {
-  const { customerAnalytics, isCustomerLoading } = useSelector((state: RootState) => ({
-    customerAnalytics: state.analytics.customerAnalytics,
-    isCustomerLoading: state.analytics.isCustomerLoading,
+const RegionList: React.FC = () => {
+  const { customerListByRegion, isCustomerListByRegionLoading } = useSelector((state: RootState) => ({
+    customerListByRegion: state.analytics.customerListByRegion,
+    isCustomerListByRegionLoading: state.analytics.isCustomerListByRegionLoading,
   }));
 
-  if (!customerAnalytics) {
+  if (!customerListByRegion) {
     return (
       <Box sx={{ textAlign: 'center', py: 4 }}>
         <Typography variant="h6" color="text.secondary">
-          Không có dữ liệu khách hàng
+          Không có dữ liệu khu vực
         </Typography>
       </Box>
     );
@@ -30,18 +30,12 @@ const CustomerList: React.FC = () => {
 
   const columns: GridColDef[] = [
     {
-      field: "customerId",
-      headerName: "ID",
-      width: 90,
-      description: "ID của khách hàng",
-    },
-    {
-      field: "customerName",
-      headerName: "Tên Khách Hàng",
-      width: 250,
-      description: "Tên đầy đủ của khách hàng",
+      field: "region",
+      headerName: "Khu Vực",
+      width: 200,
+      description: "Tên khu vực",
       renderCell: (params) => {
-        const initials = params.row.customerName
+        const initials = params.value
           .split(' ')
           .map((name: string) => name[0])
           .join('')
@@ -51,7 +45,7 @@ const CustomerList: React.FC = () => {
         return (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Avatar
-              alt={params.row.customerName}
+              alt={params.value}
               variant="rounded"
               sx={{ 
                 borderRadius: 1, 
@@ -64,17 +58,31 @@ const CustomerList: React.FC = () => {
               {initials}
             </Avatar>
             <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-              {params.row.customerName}
+              {params.value}
             </Typography>
           </Box>
         );
       },
     },
     {
-      field: "totalSpent",
-      headerName: "Tổng Chi Tiêu",
-      width: 180,
-      description: "Tổng số tiền khách hàng đã chi tiêu",
+      field: "customerCount",
+      headerName: "Số Khách Hàng",
+      width: 150,
+      description: "Tổng số khách hàng trong khu vực",
+      renderCell: (params) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <People color="primary" fontSize="small" />
+          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+            {params.value.toLocaleString()}
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      field: "totalRevenue",
+      headerName: "Tổng Doanh Thu",
+      width: 200,
+      description: "Tổng doanh thu từ khu vực",
       renderCell: (params) => (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <AttachMoney color="success" fontSize="small" />
@@ -85,13 +93,13 @@ const CustomerList: React.FC = () => {
       ),
     },
     {
-      field: "invoiceCount",
-      headerName: "Số Hóa Đơn",
+      field: "totalOrders",
+      headerName: "Tổng Đơn Hàng",
       width: 150,
-      description: "Số lượng hóa đơn đã mua",
+      description: "Tổng số đơn hàng từ khu vực",
       renderCell: (params) => (
         <Chip 
-          label={params.value} 
+          label={params.value.toLocaleString()} 
           color="primary" 
           size="small"
           icon={<Receipt />}
@@ -100,9 +108,9 @@ const CustomerList: React.FC = () => {
     },
     {
       field: "avgOrderValue",
-      headerName: "Giá Trị HĐ TB",
+      headerName: "Giá Trị TB/Đơn",
       width: 180,
-      description: "Giá trị trung bình mỗi hóa đơn",
+      description: "Giá trị trung bình mỗi đơn hàng",
       renderCell: (params) => (
         <Typography variant="body2">
           {params.value.toLocaleString()} VNĐ
@@ -110,11 +118,35 @@ const CustomerList: React.FC = () => {
       ),
     },
     {
-      field: "lastOrderDate",
-      headerName: "Lần Cuối Mua",
+      field: "totalPaid",
+      headerName: "Đã Thanh Toán",
+      width: 180,
+      description: "Tổng số tiền đã thanh toán",
+      renderCell: (params) => (
+        <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 'bold' }}>
+          {params.value.toLocaleString()} VNĐ
+        </Typography>
+      ),
+    },
+    {
+      field: "totalDebt",
+      headerName: "Còn Nợ",
       width: 150,
-      description: "Ngày mua hàng gần nhất",
+      description: "Tổng số tiền còn nợ",
+      renderCell: (params) => (
+        <Typography variant="body2" sx={{ color: 'error.main', fontWeight: 'bold' }}>
+          {params.value.toLocaleString()} VNĐ
+        </Typography>
+      ),
+    },
+    {
+      field: "lastOrderDate",
+      headerName: "Đơn Cuối",
+      width: 150,
+      description: "Ngày đơn hàng gần nhất",
       renderCell: (params) => {
+        if (!params.value) return <Typography variant="body2">-</Typography>;
+        
         const date = new Date(params.value);
         const now = new Date();
         const diffTime = Math.abs(now.getTime() - date.getTime());
@@ -135,42 +167,35 @@ const CustomerList: React.FC = () => {
       },
     },
     {
-      field: "customerSegment",
-      headerName: "Phân Khúc",
-      width: 120,
-      description: "Phân khúc khách hàng",
+      field: "firstOrderDate",
+      headerName: "Đơn Đầu",
+      width: 150,
+      description: "Ngày đơn hàng đầu tiên",
       renderCell: (params) => {
-        const segment = params.row.customerSegment || 'VIP';
-        const colors = {
-          'VIP': 'error',
-          'Premium': 'warning',
-          'Standard': 'info',
-          'Basic': 'default'
-        } as const;
+        if (!params.value) return <Typography variant="body2">-</Typography>;
         
+        const date = new Date(params.value);
         return (
-          <Chip 
-            label={segment}
-            color={colors[segment as keyof typeof colors] || 'default'}
-            size="small"
-          />
+          <Typography variant="body2">
+            {date.toLocaleDateString('vi-VN')}
+          </Typography>
         );
       },
     },
   ];
 
   // Transform data for DataGrid
-  const rows = customerAnalytics.topCustomers.map((customer, index) => ({
-    id: customer._id.customerId,
-    customerId: customer._id.customerId,
-    customerName: customer._id.customerName,
-    totalSpent: customer.totalSpent,
-    invoiceCount: customer.invoiceCount,
-    avgOrderValue: customer.avgOrderValue,
-    lastOrderDate: customer.lastOrderDate,
-    customerSegment: customer.totalSpent > 10000000 ? 'VIP' : 
-                     customer.totalSpent > 5000000 ? 'Premium' : 
-                     customer.totalSpent > 1000000 ? 'Standard' : 'Basic'
+  const rows = customerListByRegion.regions.map((region, index) => ({
+    id: region.region,
+    region: region.region,
+    customerCount: region.customerCount,
+    totalRevenue: region.totalRevenue,
+    totalOrders: region.totalOrders,
+    avgOrderValue: region.avgOrderValue,
+    totalPaid: region.totalPaid,
+    totalDebt: region.totalDebt,
+    lastOrderDate: region.lastOrderDate,
+    firstOrderDate: region.firstOrderDate
   }));
 
   return (
@@ -184,7 +209,7 @@ const CustomerList: React.FC = () => {
       }}
     >
       <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
-        Danh Sách Khách Hàng Chi Tiêu Cao
+        Danh Sách Khu Vực
       </Typography>
       
       <DataGrid
@@ -208,7 +233,7 @@ const CustomerList: React.FC = () => {
         }}
         pageSizeOptions={[10, 15, 20, 30]}
         rowSelection={false}
-        loading={isCustomerLoading}
+        loading={isCustomerListByRegionLoading}
         disableRowSelectionOnClick
         autoHeight
       />
@@ -216,4 +241,4 @@ const CustomerList: React.FC = () => {
   );
 };
 
-export default CustomerList;
+export default RegionList;

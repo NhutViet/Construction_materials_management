@@ -19,6 +19,7 @@ import Order from "./components/bodyComponents/order/Order";
 import Profile from "./components/bodyComponents/profile/Profile";
 import Login from "./components/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { StockInAnalytics } from "./components/bodyComponents/analytics";
 
 const App: React.FC = () => {
   const theme = createTheme({
@@ -68,6 +69,7 @@ const App: React.FC = () => {
           <Route path="/dashboard/revenue" element={<Revenue />}></Route>
           <Route path="/dashboard/growth" element={<Growth />}></Route>
           <Route path="/dashboard/stock-in" element={<StockIn />}></Route>
+          <Route path="/dashboard/stock-in-analytics" element={<StockInAnalytics />}></Route>
           <Route path="/dashboard/settings" element={<Setting />}></Route>
           <Route path="/dashboard/profile" element={<Profile />}></Route>
         </Route>

@@ -18,6 +18,7 @@ import {
   CardTravelOutlined,
   TrendingUpOutlined,
   PeopleAltOutlined,
+  AnalyticsOutlined,
 } from "@mui/icons-material";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -71,6 +72,11 @@ const SideBarComponent: React.FC = () => {
       title: "Nhập hàng",
       path: "stock-in",
       component: <DescriptionOutlined fontSize="medium" color="primary" />,
+    },
+    {
+      title: "Thống kê nhập hàng",
+      path: "stock-in-analytics",
+      component: <AnalyticsOutlined fontSize="medium" color="primary" />,
     },
     {
       title: "Cài đặt",

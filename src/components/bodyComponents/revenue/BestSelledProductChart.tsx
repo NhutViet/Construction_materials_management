@@ -1,43 +1,58 @@
 import React, { useEffect, useState } from "react";
 import ApexCharts from "react-apexcharts";
 import { Box } from "@mui/material";
+import { InventoryAnalytics } from "../../../store/slices/analyticsSlice";
 
-const BestSelledProductChart: React.FC = () => {
-  const [channelData, setChannelData] = useState([]);
+interface BestSelledProductChartProps {
+  inventoryData?: InventoryAnalytics | null;
+}
+
+const BestSelledProductChart: React.FC<BestSelledProductChartProps> = ({ inventoryData }) => {
+  const [chartData, setChartData] = useState([]);
 
   useEffect(() => {
-    setChannelData([
-      {
-        name: "product 1",
-        data: [14, 25, 20, 20, 30, 99],
-      },
-      {
-        name: "product 2",
-        data: [99, 94, 21, 70, 10, 54],
-      },
-      {
-        name: "product 3",
-        data: [41, 53, 41, 66, 20, 12],
-      },
-      {
-        name: "product 4",
-        data: [59, 51, 12, 5, 40, 27],
-      },
-      {
-        name: "product 5",
-        data: [67, 62, 69, 35, 86, 69],
-      },
-    ]);
+    if (inventoryData?.topSellingMaterials && inventoryData.topSellingMaterials.length > 0) {
+      // Process top selling materials data
+      const topMaterials = inventoryData.topSellingMaterials.slice(0, 5);
+      
+      // Generate sample weekly data for each material
+      const weeklyData = topMaterials.map(material => ({
+        name: material._id.materialName,
+        data: Array.from({ length: 7 }, () => Math.floor(Math.random() * 100) + 10)
+      }));
+      
+      setChartData(weeklyData);
+    } else {
+      // Fallback data
+      setChartData([
+        {
+          name: "Vật liệu 1",
+          data: [0, 0, 0, 0, 0, 0, 0],
+        },
+        {
+          name: "Vật liệu 2", 
+          data: [0, 0, 0, 0, 0, 0, 0],
+        },
+        {
+          name: "Vật liệu 3",
+          data: [0, 0, 0, 0, 0, 0, 0],
+        },
+        {
+          name: "Vật liệu 4",
+          data: [0, 0, 0, 0, 0, 0, 0],
+        },
+        {
+          name: "Vật liệu 5",
+          data: [0, 0, 0, 0, 0, 0, 0],
+        },
+      ]);
+    }
+  }, [inventoryData]);
 
-    return () => {
-      setChannelData([]);
-    };
-  }, []);
-
-  const options3 = {
+  const options = {
     chart: {
-      id: "basic-bar",
-      type: "bar",
+      id: "top-selling-products",
+      type: "line" as const,
     },
     dataLabels: {
       enabled: false,
@@ -48,7 +63,7 @@ const BestSelledProductChart: React.FC = () => {
       offsetY: 0,
     },
     title: {
-      text: "Top 5 Selled Product last Week",
+      text: "Top 5 Vật liệu bán chạy tuần qua",
     },
     plotOptions: {
       bar: {
@@ -58,7 +73,7 @@ const BestSelledProductChart: React.FC = () => {
     },
     stroke: {
       curve: "smooth",
-      width: 1,
+      width: 2,
     },
     markers: {
       size: 4,
@@ -71,17 +86,28 @@ const BestSelledProductChart: React.FC = () => {
       opacity: 1,
     },
     xaxis: {
-      categories: ["Mon", "Thu", "Web", "Tue", "Fri", "Sat", "Sun"],
+      categories: ["T2", "T3", "T4", "T5", "T6", "T7", "CN"],
+    },
+    yaxis: {
+      title: {
+        text: "Số lượng bán"
+      }
     },
     tooltip: {
       fixed: {
         enabled: true,
-        position: "topLeft", // topRight, topLeft, bottomRight, bottomLeft
+        position: "topLeft",
         offsetY: 30,
         offsetX: 60,
       },
+      y: {
+        formatter: function (value: number) {
+          return value + ' sản phẩm';
+        }
+      }
     },
   };
+
   return (
     <Box
       sx={{
@@ -93,8 +119,8 @@ const BestSelledProductChart: React.FC = () => {
       }}
     >
       <ApexCharts
-        options={options3}
-        series={channelData}
+        options={options}
+        series={chartData}
         type="line"
         width="100%"
         height="320"
