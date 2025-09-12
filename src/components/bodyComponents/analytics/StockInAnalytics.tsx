@@ -5,7 +5,7 @@ import { fetchStockInAnalytics } from "../../../store/slices/analyticsSlice";
 import { Box, Grid, CircularProgress, Alert, Typography, Paper } from "@mui/material";
 import StockInStats from "./StockInStats";
 import SupplierAnalysisChart from "./SupplierAnalysisChart";
-import PaymentStatusChart from "./PaymentAnalytics";
+import PaymentStatusChart from "./PaymentStatusChart";
 import ProcessingTimeChart from "./ProcessingTimeChart";
 
 const StockInAnalytics: React.FC = () => {

@@ -165,14 +165,7 @@ const NavBarComponent: React.FC = () => {
                     </ListItemIcon>
                     Hồ sơ
                   </MenuItem>
-                  <Divider />
-
-                  <MenuItem>
-                    <ListItemIcon>
-                      <Settings fontSize="small" />
-                    </ListItemIcon>
-                    Cài đặt
-                  </MenuItem>
+                  <Divider />            
                   <MenuItem onClick={handleLogout}>
                     <ListItemIcon>
                       <Logout fontSize="small" />

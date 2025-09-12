@@ -54,6 +54,11 @@ const SideBarComponent: React.FC = () => {
       component: <CardTravelOutlined fontSize="medium" color="primary" />,
     },
     {
+      title: "Nhập hàng",
+      path: "stock-in",
+      component: <DescriptionOutlined fontSize="medium" color="primary" />,
+    },
+    {
       title: "Khách hàng",
       path: "customers",
       component: <PeopleAltOutlined fontSize="medium" color="primary" />,
@@ -63,25 +68,11 @@ const SideBarComponent: React.FC = () => {
       path: "revenue",
       component: <MonetizationOnOutlined fontSize="medium" color="primary" />,
     },
-    {
-      title: "Tăng trưởng",
-      path: "growth",
-      component: <TrendingUpOutlined fontSize="medium" color="primary" />,
-    },
-    {
-      title: "Nhập hàng",
-      path: "stock-in",
-      component: <DescriptionOutlined fontSize="medium" color="primary" />,
-    },
+
     {
       title: "Thống kê nhập hàng",
       path: "stock-in-analytics",
       component: <AnalyticsOutlined fontSize="medium" color="primary" />,
-    },
-    {
-      title: "Cài đặt",
-      path: "settings",
-      component: <SettingsOutlined fontSize="medium" color="primary" />,
     },
   ];
   

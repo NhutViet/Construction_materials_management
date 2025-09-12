@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../../../store";
 import { fetchPaymentAnalytics, fetchPaymentHistoryAnalytics } from "../../../store/slices/analyticsSlice";
+import { fetchInvoices } from "../../../store/slices/invoiceSlice";
 import { 
   Box, 
   Grid, 
@@ -32,10 +33,28 @@ const PaymentAnalytics: React.FC = () => {
     error 
   } = useSelector((state: RootState) => state.analytics);
 
+  const { invoices, isLoading: isInvoicesLoading } = useSelector((state: RootState) => state.invoice);
+
   useEffect(() => {
     dispatch(fetchPaymentAnalytics({}));
     dispatch(fetchPaymentHistoryAnalytics({}));
+    dispatch(fetchInvoices({ page: 1, limit: 1000 })); // Fetch all invoices to filter cancelled ones
   }, [dispatch]);
+
+  // Calculate total debt excluding cancelled orders
+  const calculateAdjustedTotalDebt = () => {
+    if (!invoices || invoices.length === 0) {
+      return paymentAnalytics?.summary?.totalDebt || 0;
+    }
+
+    // Filter out cancelled invoices and calculate remaining amount
+    const activeInvoices = invoices.filter(invoice => invoice.status !== 'cancelled');
+    const totalDebtFromActiveInvoices = activeInvoices.reduce((sum, invoice) => {
+      return sum + (invoice.remainingAmount || 0);
+    }, 0);
+
+    return totalDebtFromActiveInvoices;
+  };
 
   if (error) {
     return (
@@ -45,7 +64,7 @@ const PaymentAnalytics: React.FC = () => {
     );
   }
 
-  if (isPaymentLoading || isPaymentHistoryLoading) {
+  if (isPaymentLoading || isPaymentHistoryLoading || isInvoicesLoading) {
     return (
       <Box sx={{ p: 3, mx: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
         <CircularProgress />
@@ -65,6 +84,8 @@ const PaymentAnalytics: React.FC = () => {
     }
 
     const { summary } = paymentAnalytics;
+    const adjustedTotalDebt = calculateAdjustedTotalDebt();
+    
     return [
       { 
         title: "Tổng doanh thu", 
@@ -78,12 +99,12 @@ const PaymentAnalytics: React.FC = () => {
       },
       { 
         title: "Còn nợ", 
-        value: `${summary.totalDebt.toLocaleString('vi-VN')} VNĐ`, 
+        value: `${adjustedTotalDebt.toLocaleString('vi-VN')} VNĐ`, 
         color: "error" 
       },
       { 
         title: "Tỷ lệ thanh toán", 
-        value: `${summary.paymentRate.toFixed(1)}%`, 
+        value: `${(summary.paymentRate || 0).toFixed(1)}%`, 
         color: "warning" 
       },
     ];
@@ -171,6 +192,13 @@ const PaymentAnalytics: React.FC = () => {
 
   return (
     <Box sx={{ p: 3, mx: 3 }}>
+      {/* Info about cancelled orders exclusion */}
+      <Box sx={{ mb: 2, p: 2, bgcolor: '#e3f2fd', borderRadius: 1, border: '1px solid #2196f3' }}>
+        <Typography variant="body2" color="primary" sx={{ fontWeight: 500 }}>
+          ℹ️ Lưu ý: Tổng nợ đã được tính toán loại trừ các đơn hàng đã bị hủy để đảm bảo tính chính xác.
+        </Typography>
+      </Box>
+      
       {/* Payment Overview Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {paymentCards.map((card, index) => (
@@ -345,12 +373,12 @@ const PaymentAnalytics: React.FC = () => {
                         {customer.totalRemaining.toLocaleString('vi-VN')} VNĐ
                       </TableCell>
                       <TableCell align="right">
-                        {customer.avgPaymentRate.toFixed(1)}%
+                        {(customer.avgPaymentRate || 0).toFixed(1)}%
                       </TableCell>
                       <TableCell align="center">
                         <Chip 
-                          label={customer.avgPaymentRate > 80 ? "Tốt" : customer.avgPaymentRate > 50 ? "Trung bình" : "Kém"} 
-                          color={customer.avgPaymentRate > 80 ? "success" : customer.avgPaymentRate > 50 ? "warning" : "error"}
+                          label={(customer.avgPaymentRate || 0) > 80 ? "Tốt" : (customer.avgPaymentRate || 0) > 50 ? "Trung bình" : "Kém"} 
+                          color={(customer.avgPaymentRate || 0) > 80 ? "success" : (customer.avgPaymentRate || 0) > 50 ? "warning" : "error"}
                           size="small"
                         />
                       </TableCell>
