@@ -3,7 +3,7 @@ import AxiosInstance from '../AxiosInstance';
 import { matchesSearchTerm } from '../../utils/vietnameseUtils';
 
 // Material interface based on the backend model
-interface Material {
+export interface Material {
   _id: string;
   name: string;
   category: string;

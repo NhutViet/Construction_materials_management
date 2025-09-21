@@ -6,6 +6,7 @@ import RevenueChart from "./RevenueChart";
 import RevenueByCategory from "./RevenueByCategory";
 import MaterialUsageChart from "./MaterialUsageChart";
 import TopSellingMaterials from "./TopSellingMaterials";
+
 export default class Home extends Component {
   constructor(props) {
     super(props);
@@ -42,6 +43,8 @@ export default class Home extends Component {
             <TopSellingMaterials />
           </Grid>
         </Grid>
+
+      
       </Box>
     );
   }
