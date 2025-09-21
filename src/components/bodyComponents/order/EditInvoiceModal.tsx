@@ -38,6 +38,7 @@ import { AppDispatch, RootState } from '../../../store';
 import { updateInvoice, clearError } from '../../../store/slices/invoiceSlice';
 import { fetchMaterials } from '../../../store/slices/materialSlice';
 import { UpdateInvoiceDto, InvoiceItem, Invoice } from '../../../store/slices/invoiceSlice';
+import { checkLowStockAndNotify, sendInvoiceUpdateNotification } from '../../../utils/notificationUtils';
 
 interface EditInvoiceModalProps {
   invoice: Invoice | null;
@@ -356,10 +357,21 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
         deliveryDate: formData.deliveryDate
       };
 
-      await dispatch(updateInvoice({
+      const updatedInvoice = await dispatch(updateInvoice({
         id: invoice._id,
         data: updateData
       })).unwrap();
+
+      // Fetch updated materials after invoice update (inventory was updated)
+      await dispatch(fetchMaterials());
+      
+      // Send invoice update notification
+      await sendInvoiceUpdateNotification(dispatch, updatedInvoice);
+      
+      // Check for low stock and send notifications with updated materials
+      const updatedMaterials = await dispatch(fetchMaterials()).unwrap();
+      console.log('Checking low stock with updated materials:', updatedMaterials.length, 'materials');
+      await checkLowStockAndNotify(dispatch, updatedInvoice, updatedMaterials);
 
       console.log('Hóa đơn đã được cập nhật thành công');
       onSuccess?.();

@@ -25,6 +25,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../../store';
 import { Invoice, processPayment, updatePaymentStatus } from '../../../store/slices/invoiceSlice';
 import VIETQR_CONFIG, { getBankInfoFromUser } from '../../../config/vietqrConfig';
+import { sendPaymentSuccessNotification, sendInvoiceCompletionNotification, sendPaymentPartialNotification } from '../../../utils/notificationUtils';
 
 interface VietQRModalProps {
   open: boolean;
@@ -61,6 +62,7 @@ const VietQRModal: React.FC<VietQRModalProps> = ({ open, onClose, invoice, onSuc
       setPaymentAmount(invoice.remainingAmount || invoice.totalAmount);
     }
   }, [open, invoice]);
+
 
   const handleGenerateQR = async () => {
     if (!invoice) return;
@@ -402,7 +404,7 @@ const VietQRModal: React.FC<VietQRModalProps> = ({ open, onClose, invoice, onSuc
       }
 
       // Process the payment
-      await dispatch(processPayment({
+      const updatedInvoice = await dispatch(processPayment({
         id: invoice._id,
         data: {
           amount: paymentAmount,
@@ -422,6 +424,28 @@ const VietQRModal: React.FC<VietQRModalProps> = ({ open, onClose, invoice, onSuc
             notes: `Cập nhật trạng thái thanh toán`
           }
         })).unwrap();
+      }
+
+      // Send payment success notification
+      await sendPaymentSuccessNotification(
+        dispatch,
+        updatedInvoice,
+        paymentAmount,
+        'Chuyển khoản QR Code'
+      );
+
+      // Check if payment is complete
+      if (newPaymentStatus === 'paid') {
+        // Send invoice completion notification
+        await sendInvoiceCompletionNotification(dispatch, updatedInvoice);
+      } else if (newPaymentStatus === 'partial') {
+        // Send partial payment notification
+        await sendPaymentPartialNotification(
+          dispatch,
+          updatedInvoice,
+          paymentAmount,
+          newRemainingAmount
+        );
       }
       
       console.log('Payment confirmed successfully:', {

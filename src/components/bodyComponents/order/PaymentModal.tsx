@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -15,6 +15,7 @@ import { Payment as PaymentIcon } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../../store';
 import { processPayment } from '../../../store/slices/invoiceSlice';
+import { sendPaymentSuccessNotification, sendInvoiceCompletionNotification, sendPaymentPartialNotification } from '../../../utils/notificationUtils';
 
 interface PaymentModalProps {
   open: boolean;
@@ -35,6 +36,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [notes, setNotes] = useState<string>('');
   const [error, setError] = useState<string>('');
+
 
   const handlePaymentAmountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(event.target.value) || 0;
@@ -61,13 +63,37 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     }
 
     try {
-      await dispatch(processPayment({
+      // Process payment
+      const updatedInvoice = await dispatch(processPayment({
         id: invoice._id,
         data: {
           amount: paymentAmount,
           notes: notes.trim() || undefined
         }
       })).unwrap();
+
+      // Send payment success notification
+      await sendPaymentSuccessNotification(
+        dispatch,
+        updatedInvoice,
+        paymentAmount,
+        updatedInvoice.paymentMethod === 'cash' ? 'Tiền mặt' : 
+        updatedInvoice.paymentMethod === 'online' ? 'Chuyển khoản' : 'Nợ'
+      );
+
+      // Check if payment is complete
+      if (updatedInvoice.paymentStatus === 'paid') {
+        // Send invoice completion notification
+        await sendInvoiceCompletionNotification(dispatch, updatedInvoice);
+      } else if (updatedInvoice.paymentStatus === 'partial') {
+        // Send partial payment notification
+        await sendPaymentPartialNotification(
+          dispatch,
+          updatedInvoice,
+          paymentAmount,
+          updatedInvoice.remainingAmount
+        );
+      }
 
       // Reset form
       setPaymentAmount(0);
