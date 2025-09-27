@@ -86,16 +86,15 @@ const DashboardSummary: React.FC = () => {
   return (
     <Grid
       container
+      spacing={{ xs: 2, md: 3 }}
       sx={{
-        display: "flex",
-        justifyContent: "space-between",
-        marginX: 3,
+        marginX: { xs: 0, sm: 1, md: 3 },
         borderRadius: 2,
         padding: 0,
       }}
     >
       {cardComponents.map((card, index) => (
-        <Grid item md={3} key={index}>
+        <Grid item xs={6} sm={6} md={3} key={index}>
           <InfoCard card={card} />
         </Grid>
       ))}

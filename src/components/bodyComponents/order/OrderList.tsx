@@ -196,10 +196,9 @@ export default function OrderList() {
   return (
     <Box
       sx={{
-        margin: 3,
+      
         bgcolor: "white",
         borderRadius: 2,
-        padding: 3,
         height: "100%",
       }}
     >
@@ -209,7 +208,7 @@ export default function OrderList() {
           borderLeft: 0,
           borderRight: 0,
           borderRadius: 0,
-          height: 'calc(100vh - 300px)', // Đảm bảo có chiều cao cố định
+          height: 'calc(100vh - 100px)', // Đảm bảo có chiều cao cố định
           '& .MuiDataGrid-row': {
             cursor: 'pointer',
           },
@@ -222,6 +221,11 @@ export default function OrderList() {
           '& .MuiDataGrid-columnHeader': {
             fontSize: '16px',
             fontWeight: 'bold',
+            backgroundColor: '#1976d2',
+            color: 'white',
+          },
+          '& .MuiDataGrid-columnHeader:hover': {
+            backgroundColor: '#1565c0',
           },
           '& .MuiDataGrid-footerContainer': {
             borderTop: '1px solid #e0e0e0',

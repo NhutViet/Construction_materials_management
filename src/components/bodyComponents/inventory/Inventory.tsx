@@ -9,21 +9,32 @@ export default class Inventory extends Component {
   }
   render() {
     return (
-      <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        flexDirection: 'column',
+        p: { xs: 1, sm: 2, md: 3 }
+      }}>
         <Box
           sx={{
-            mx: 3,
-            mt: 3,
             bgcolor: "white",
             borderRadius: 2,
-            padding: 3,
+            padding: { xs: 2, sm: 3 },
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            boxShadow: 1
           }}
         >
-          <Typography variant="h5" sx={{ mb: 3, fontWeight: "bold" }}>
+          <Typography 
+            variant="h5" 
+            sx={{ 
+              mb: { xs: 2, sm: 3 }, 
+              fontWeight: "bold",
+              fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem' }
+            }}
+          >
             Hàng Hoá
           </Typography>
           <Box sx={{ flex: 1, overflow: 'hidden' }}>

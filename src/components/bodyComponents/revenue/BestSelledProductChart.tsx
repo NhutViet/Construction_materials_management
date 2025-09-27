@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import ApexCharts from "react-apexcharts";
 import { Box } from "@mui/material";
 import { InventoryAnalytics } from "../../../store/slices/analyticsSlice";
+import useResponsive from "../../../hooks/useResponsive";
 
 interface BestSelledProductChartProps {
   inventoryData?: InventoryAnalytics | null;
@@ -9,6 +10,7 @@ interface BestSelledProductChartProps {
 
 const BestSelledProductChart: React.FC<BestSelledProductChartProps> = ({ inventoryData }) => {
   const [chartData, setChartData] = useState([]);
+  const { isMobile } = useResponsive();
 
   useEffect(() => {
     if (inventoryData?.topSellingMaterials && inventoryData.topSellingMaterials.length > 0) {
@@ -53,6 +55,14 @@ const BestSelledProductChart: React.FC<BestSelledProductChartProps> = ({ invento
     chart: {
       id: "top-selling-products",
       type: "line" as const,
+      toolbar: {
+        show: false
+      },
+      animations: {
+        enabled: true,
+        easing: 'easeinout',
+        speed: 800
+      }
     },
     dataLabels: {
       enabled: false,
@@ -61,9 +71,18 @@ const BestSelledProductChart: React.FC<BestSelledProductChartProps> = ({ invento
       position: "top",
       horizontalAlign: "center",
       offsetY: 0,
+      fontSize: '12px',
+      itemMargin: {
+        horizontal: 10,
+        vertical: 5
+      }
     },
     title: {
       text: "Top 5 Vật liệu bán chạy tuần qua",
+      style: {
+        fontSize: '14px',
+        fontWeight: 600
+      }
     },
     plotOptions: {
       bar: {
@@ -87,18 +106,28 @@ const BestSelledProductChart: React.FC<BestSelledProductChartProps> = ({ invento
     },
     xaxis: {
       categories: ["T2", "T3", "T4", "T5", "T6", "T7", "CN"],
+      labels: {
+        style: {
+          fontSize: '11px'
+        }
+      }
     },
     yaxis: {
       title: {
-        text: "Số lượng bán"
+        text: "Số lượng bán",
+        style: {
+          fontSize: '11px'
+        }
+      },
+      labels: {
+        style: {
+          fontSize: '10px'
+        }
       }
     },
     tooltip: {
       fixed: {
-        enabled: true,
-        position: "topLeft",
-        offsetY: 30,
-        offsetX: 60,
+        enabled: false
       },
       y: {
         formatter: function (value: number) {
@@ -106,16 +135,41 @@ const BestSelledProductChart: React.FC<BestSelledProductChartProps> = ({ invento
         }
       }
     },
+    responsive: [{
+      breakpoint: 600,
+      options: {
+        legend: {
+          fontSize: '10px',
+          itemMargin: {
+            horizontal: 5,
+            vertical: 3
+          }
+        },
+        title: {
+          style: {
+            fontSize: '12px'
+          }
+        },
+        markers: {
+          size: 3,
+          hover: {
+            size: 5
+          }
+        }
+      }
+    }]
   };
 
   return (
     <Box
       sx={{
-        marginX: 4,
+        marginX: { xs: 0, sm: 1, md: 2 },
         bgcolor: "white",
         borderRadius: 2,
-        padding: 3,
+        padding: { xs: 2, sm: 2.5, md: 3 },
         height: "95%",
+        boxShadow: 1,
+        overflow: 'hidden'
       }}
     >
       <ApexCharts
@@ -123,7 +177,7 @@ const BestSelledProductChart: React.FC<BestSelledProductChartProps> = ({ invento
         series={chartData}
         type="line"
         width="100%"
-        height="320"
+        height={isMobile ? "280" : "320"}
       />
     </Box>
   );

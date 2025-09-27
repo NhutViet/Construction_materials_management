@@ -8,6 +8,7 @@ import {
   ListItemButton,
   IconButton,
   Box,
+  Typography,
 } from "@mui/material";
 import {
   HomeOutlined,
@@ -28,10 +29,17 @@ interface SideBarItem {
   component: React.ReactElement;
 }
 
-const SideBarComponent: React.FC = () => {
+interface SideBarComponentProps {
+  onItemClick?: () => void;
+}
+
+const SideBarComponent: React.FC<SideBarComponentProps> = ({ onItemClick }) => {
   const navigate = useNavigate();
   const navigateTo = (to: string) => {
     navigate(to);
+    if (onItemClick) {
+      onItemClick();
+    }
   };
   const location = useLocation();
   const currentPage = location.pathname;
@@ -84,9 +92,14 @@ const SideBarComponent: React.FC = () => {
   
   return (
     <>
-      <List>
+      <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0' }}>
+        <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+          Menu
+        </Typography>
+      </Box>
+      <List sx={{ px: 1, py: 2 }}>
         {sideBarComponent.map((comp, index) => (
-          <ListItem disablePadding dense={true} key={index}>
+          <ListItem disablePadding key={index} sx={{ mb: 1 }}>
             <Box width="100%">
               <ListItemButton
                 onClick={(event) => {
@@ -98,21 +111,30 @@ const SideBarComponent: React.FC = () => {
                   currentPage === "/dashboard/" + comp.path
                 }
                 sx={{
-                  mb: 3,
-                  borderLeft: 0,
+                  borderRadius: 2,
+                  borderLeft: selected === index && currentPage === "/dashboard/" + comp.path ? 4 : 0,
                   borderColor: "primary.main",
-                  ml: 1,
+                  backgroundColor: selected === index && currentPage === "/dashboard/" + comp.path ? 'primary.light' : 'transparent',
+                  '&:hover': {
+                    backgroundColor: 'action.hover',
+                  },
+                  '&.Mui-selected': {
+                    backgroundColor: 'primary.light',
+                    '&:hover': {
+                      backgroundColor: 'primary.light',
+                    }
+                  }
                 }}
               >
-                <ListItemIcon>
-                  <IconButton>{comp.component}</IconButton>
+                <ListItemIcon sx={{ minWidth: 40 }}>
+                  {comp.component}
                 </ListItemIcon>
                 <ListItemText
                   primary={comp.title}
                   primaryTypographyProps={{
-                    fontSize: "medium",
-                    fontWeight: selected === index ? "bold" : "",
-                    color: selected === index ? "primary.main" : "inherit",
+                    fontSize: "0.9rem",
+                    fontWeight: selected === index ? "bold" : "normal",
+                    color: selected === index ? "primary.main" : "text.primary",
                   }}
                 />
               </ListItemButton>

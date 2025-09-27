@@ -1,3 +1,179 @@
 .bod{
     background-color:#DEE3E9;
 }
+
+/* Fixed Header Styles */
+.MuiAppBar-root {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1300 !important;
+    height: 64px !important;
+}
+
+/* Sidebar Styles */
+.MuiDrawer-paper {
+    z-index: 1 !important;
+}
+
+/* Desktop Sidebar specific */
+@media (min-width: 900px) {
+    .MuiDrawer-paper {
+        position: fixed !important;
+        top: 64px !important;
+        left: 0 !important;
+        z-index: 1 !important;
+    }
+}
+
+/* Main Content Adjustment */
+.main-content {
+    margin-top: 64px !important;
+    min-height: calc(100vh - 64px) !important;
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+    .MuiContainer-root {
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+    }
+    
+    .MuiAppBar-root {
+        padding: 8px !important;
+        height: 64px !important;
+    }
+    
+    .MuiTypography-h6 {
+        font-size: 1rem !important;
+    }
+    
+    .MuiCard-root {
+        margin: 4px !important;
+    }
+    
+    .MuiGrid-container {
+        margin: 0 !important;
+    }
+}
+
+/* Tablet Styles */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .MuiContainer-root {
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+    }
+}
+
+/* Mobile Navigation */
+.mobile-drawer .MuiDrawer-paper {
+    width: 280px !important;
+}
+
+/* Responsive Charts */
+.responsive-chart {
+    width: 100% !important;
+    height: 300px !important;
+}
+
+@media (max-width: 600px) {
+    .responsive-chart {
+        height: 250px !important;
+    }
+}
+
+/* Mobile Table Styles */
+@media (max-width: 768px) {
+    .MuiTableContainer-root {
+        overflow-x: auto !important;
+    }
+    
+    .MuiTableCell-root {
+        padding: 8px !important;
+        font-size: 0.875rem !important;
+    }
+    
+    .MuiTableHead-root .MuiTableCell-root {
+        font-size: 0.75rem !important;
+        font-weight: 600 !important;
+    }
+}
+
+/* Mobile Form Styles */
+@media (max-width: 768px) {
+    .MuiTextField-root {
+        margin-bottom: 16px !important;
+    }
+    
+    .MuiButton-root {
+        width: 100% !important;
+        margin-bottom: 8px !important;
+    }
+    
+    .MuiDialog-paper {
+        margin: 8px !important; /* Reduced margin for better mobile experience */
+        width: calc(100% - 16px) !important;
+        max-width: none !important;
+        max-height: calc(100vh - 16px) !important; /* Better height management */
+    }
+    
+    /* Better spacing for mobile forms */
+    .MuiFormControl-root {
+        margin-bottom: 12px !important;
+    }
+    
+    .MuiGrid-item {
+        padding: 8px !important;
+    }
+    
+    /* Mobile-specific modal content padding */
+    .MuiDialogContent-root {
+        padding: 0 !important;
+    }
+}
+
+/* Tablet Form Styles */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .MuiDialog-paper {
+        margin: 24px !important;
+        width: calc(100% - 48px) !important;
+        max-height: calc(100vh - 48px) !important;
+    }
+}
+
+/* Mobile Card Styles */
+@media (max-width: 768px) {
+    .MuiCardContent-root {
+        padding: 12px !important;
+    }
+    
+    .MuiCardActions-root {
+        padding: 8px 12px !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+}
+
+/* Mobile Typography */
+@media (max-width: 768px) {
+    .MuiTypography-h4 {
+        font-size: 1.5rem !important;
+    }
+    
+    .MuiTypography-h5 {
+        font-size: 1.25rem !important;
+    }
+    
+    .MuiTypography-h6 {
+        font-size: 1rem !important;
+    }
+    
+    .MuiTypography-body1 {
+        font-size: 0.875rem !important;
+    }
+    
+    .MuiTypography-body2 {
+        font-size: 0.75rem !important;
+    }
+}

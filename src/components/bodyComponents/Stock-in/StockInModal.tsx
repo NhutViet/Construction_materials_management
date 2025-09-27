@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTheme, useMediaQuery } from '@mui/material';
 import {
   Dialog,
   DialogTitle,
@@ -58,6 +59,8 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
   const dispatch = useDispatch<AppDispatch>();
   const isLoading = useSelector(selectStockInsLoading);
   const materials = useSelector(selectMaterials);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [formData, setFormData] = useState({
     supplier: '',
     supplierPhone: '',
@@ -254,13 +257,18 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
       onClose={onClose} 
       maxWidth="lg" 
       fullWidth
+      fullScreen={isMobile}
       PaperProps={{
-        sx: { minHeight: '80vh' }
+        sx: { 
+          minHeight: isMobile ? '100vh' : '80vh',
+          m: isMobile ? 0 : 2,
+          borderRadius: isMobile ? 0 : 1
+        }
       }}
     >
-      <DialogTitle>
+      <DialogTitle sx={{ px: { xs: 2, sm: 3 }, py: { xs: 1.5, sm: 2 } }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6">
+          <Typography variant="h6" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
             {stockIn ? 'Chỉnh sửa phiếu nhập kho' : 'Tạo phiếu nhập kho mới'}
           </Typography>
           <IconButton onClick={onClose} size="small">
@@ -269,15 +277,23 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
         </Box>
       </DialogTitle>
 
-      <DialogContent dividers>
-        <Grid container spacing={3}>
+      <DialogContent 
+        dividers 
+        sx={{ 
+          px: { xs: 2, sm: 3 }, 
+          py: { xs: 2, sm: 3 },
+          maxHeight: isMobile ? 'calc(100vh - 120px)' : '70vh',
+          overflow: 'auto'
+        }}
+      >
+        <Grid container spacing={{ xs: 2, sm: 3 }}>
           {/* Supplier Information */}
           <Grid item xs={12}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
+            <Typography variant="h6" sx={{ mb: 2, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
               Thông tin nhà cung cấp
             </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
+            <Grid container spacing={{ xs: 1.5, sm: 2 }}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   label="Nhà cung cấp *"
@@ -285,14 +301,16 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
                   onChange={(e) => handleInputChange('supplier', e.target.value)}
                   error={!!errors.supplier}
                   helperText={errors.supplier}
+                  size="small"
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   label="Số điện thoại"
                   value={formData.supplierPhone}
                   onChange={(e) => handleInputChange('supplierPhone', e.target.value)}
+                  size="small"
                 />
               </Grid>
               <Grid item xs={12}>
@@ -303,6 +321,7 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
                   onChange={(e) => handleInputChange('supplierAddress', e.target.value)}
                   multiline
                   rows={2}
+                  size="small"
                 />
               </Grid>
             </Grid>
@@ -312,11 +331,11 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
 
           {/* Add Items Section */}
           <Grid item xs={12}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
+            <Typography variant="h6" sx={{ mb: 2, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
               Thêm sản phẩm
             </Typography>
-            <Grid container spacing={2} sx={{ mb: 3 }}>
-              <Grid item xs={12} md={5}>
+            <Grid container spacing={{ xs: 1.5, sm: 2 }} sx={{ mb: 3 }}>
+              <Grid item xs={12} sm={12} md={5}>
                 <Autocomplete
                   options={materials || []}
                   getOptionLabel={(option) => `${option.name} - ${option.price?.toLocaleString('vi-VN') || 0}đ/${option.unit || 'cái'}`}
@@ -329,6 +348,7 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
                       placeholder="Tìm kiếm sản phẩm..."
                       error={!!errors.items}
                       helperText={typeof errors.items === 'string' ? errors.items : ''}
+                      size="small"
                     />
                   )}
                   renderOption={(props, option) => {
@@ -356,7 +376,7 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
                   }}
                 />
               </Grid>
-              <Grid item xs={12} md={3}>
+              <Grid item xs={6} sm={3} md={3}>
                 <TextField
                   fullWidth
                   label="Số lượng"
@@ -364,18 +384,27 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
                   value={itemQuantity}
                   onChange={(e) => setItemQuantity(parseInt(e.target.value) || 1)}
                   inputProps={{ min: 1 }}
+                  size="small"
                 />
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={6} sm={9} md={4}>
                 <Button
                   fullWidth
                   variant="outlined"
                   startIcon={<AddIcon />}
                   onClick={addItemToStockIn}
                   disabled={!selectedMaterial || itemQuantity <= 0}
-                  sx={{ height: '56px' }}
+                  sx={{ 
+                    height: { xs: '40px', sm: '56px' },
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                  }}
                 >
-                  Thêm vào danh sách
+                  <Box sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                    Thêm vào danh sách
+                  </Box>
+                  <Box sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                    Thêm
+                  </Box>
                 </Button>
               </Grid>
             </Grid>
@@ -390,21 +419,33 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
             {items.length > 0 && (
               <Box>
                 <Alert severity="info" sx={{ mb: 2 }}>
-                  <Typography variant="body2">
+                  <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                     <strong>Lưu ý:</strong> Khi đã thêm sản phẩm vào danh sách, bạn chỉ có thể xóa item đó. 
                     Để thay đổi số lượng, hãy xóa item cũ và thêm lại với số lượng mới.
                   </Typography>
                 </Alert>
-                <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
-                  <Table stickyHeader>
+                <TableContainer component={Paper} sx={{ maxHeight: { xs: 300, sm: 400 } }}>
+                  <Table stickyHeader size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell>Tên mặt hàng</TableCell>
-                      <TableCell align="center">Đơn vị</TableCell>
-                      <TableCell align="center">Số lượng</TableCell>
-                      <TableCell align="right">Đơn giá (VND)</TableCell>
-                      <TableCell align="right">Thành tiền (VND)</TableCell>
-                      <TableCell align="center">Thao tác</TableCell>
+                      <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 1 }}>
+                        Tên mặt hàng
+                      </TableCell>
+                      <TableCell align="center" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 1 }}>
+                        Đơn vị
+                      </TableCell>
+                      <TableCell align="center" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 1 }}>
+                        Số lượng
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 1 }}>
+                        Đơn giá
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 1 }}>
+                        Thành tiền
+                      </TableCell>
+                      <TableCell align="center" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 1 }}>
+                        Thao tác
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -415,43 +456,75 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
                       
                       return (
                         <TableRow key={index}>
-                          <TableCell>
+                          <TableCell sx={{ py: 1 }}>
                             <Box>
-                              <Typography variant="body2" fontWeight="medium">
+                              <Typography 
+                                variant="body2" 
+                                fontWeight="medium"
+                                sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                              >
                                 {item.materialName}
                               </Typography>
                               {material && (
                                 <Chip
-                                  label={`Tồn kho: ${material.quantity}`}
+                                  label={`Tồn: ${material.quantity}`}
                                   color={isOutOfStock ? 'error' : isLowStock ? 'warning' : 'success'}
                                   size="small"
                                   variant="outlined"
-                                  sx={{ mt: 0.5 }}
+                                  sx={{ 
+                                    mt: 0.5,
+                                    fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                                    height: { xs: 20, sm: 24 }
+                                  }}
                                 />
                               )}
                             </Box>
                           </TableCell>
-                          <TableCell align="center">{item.unit}</TableCell>
-                          <TableCell align="center">
-                            <Typography variant="body2" sx={{ fontWeight: 'bold', textAlign: 'center' }}>
+                          <TableCell align="center" sx={{ py: 1 }}>
+                            <Typography sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                              {item.unit}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="center" sx={{ py: 1 }}>
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                fontWeight: 'bold', 
+                                textAlign: 'center',
+                                fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                              }}
+                            >
                               {item.quantity}
                             </Typography>
                           </TableCell>
-                          <TableCell align="right">
-                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                          <TableCell align="right" sx={{ py: 1 }}>
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                fontWeight: 'bold',
+                                fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                              }}
+                            >
                               {item.unitPrice.toLocaleString('vi-VN')}đ
                             </Typography>
                           </TableCell>
-                          <TableCell align="right">
-                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                          <TableCell align="right" sx={{ py: 1 }}>
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                fontWeight: 'bold',
+                                fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                              }}
+                            >
                               {item.totalPrice.toLocaleString('vi-VN')}đ
                             </Typography>
                           </TableCell>
-                          <TableCell align="center">
+                          <TableCell align="center" sx={{ py: 1 }}>
                             <IconButton
                               size="small"
                               color="error"
                               onClick={() => removeItem(index)}
+                              sx={{ p: { xs: 0.5, sm: 1 } }}
                             >
                               <DeleteIcon fontSize="small" />
                             </IconButton>
@@ -470,11 +543,11 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
 
           {/* Additional Information */}
           <Grid item xs={12}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
+            <Typography variant="h6" sx={{ mb: 2, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
               Thông tin bổ sung
             </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={4}>
+            <Grid container spacing={{ xs: 1.5, sm: 2 }}>
+              <Grid item xs={12} sm={6} md={4}>
                 <TextField
                   fullWidth
                   label="Ngày nhập hàng"
@@ -482,9 +555,10 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
                   value={formData.receivedDate}
                   onChange={(e) => handleInputChange('receivedDate', e.target.value)}
                   InputLabelProps={{ shrink: true }}
+                  size="small"
                 />
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={6} sm={3} md={4}>
                 <TextField
                   fullWidth
                   label="Thuế (%)"
@@ -492,9 +566,10 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
                   value={formData.taxRate}
                   onChange={(e) => handleInputChange('taxRate', Number(e.target.value))}
                   inputProps={{ min: 0, max: 100 }}
+                  size="small"
                 />
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={6} sm={3} md={4}>
                 <TextField
                   fullWidth
                   label="Giảm giá (%)"
@@ -502,6 +577,7 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
                   value={formData.discountRate}
                   onChange={(e) => handleInputChange('discountRate', Number(e.target.value))}
                   inputProps={{ min: 0, max: 100 }}
+                  size="small"
                 />
               </Grid>
               <Grid item xs={12}>
@@ -512,6 +588,7 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
                   onChange={(e) => handleInputChange('notes', e.target.value)}
                   multiline
                   rows={3}
+                  size="small"
                 />
               </Grid>
             </Grid>
@@ -519,32 +596,51 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
 
           {/* Totals */}
           <Grid item xs={12}>
-            <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
-              <Typography variant="h6" sx={{ mb: 2 }}>
+            <Paper sx={{ p: { xs: 1.5, sm: 2 }, bgcolor: 'grey.50' }}>
+              <Typography variant="h6" sx={{ mb: 2, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                 Tổng kết
               </Typography>
-              <Grid container spacing={2}>
+              <Grid container spacing={{ xs: 1, sm: 2 }}>
                 <Grid item xs={6}>
-                  <Typography variant="body1">Tạm tính:</Typography>
+                  <Typography variant="body1" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
+                    Tạm tính:
+                  </Typography>
                 </Grid>
                 <Grid item xs={6}>
-                  <Typography variant="body1" align="right">
+                  <Typography 
+                    variant="body1" 
+                    align="right"
+                    sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+                  >
                     {totals.subtotal.toLocaleString()} VND
                   </Typography>
                 </Grid>
                 <Grid item xs={6}>
-                  <Typography variant="body1">Thuế ({formData.taxRate}%):</Typography>
+                  <Typography variant="body1" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
+                    Thuế ({formData.taxRate}%):
+                  </Typography>
                 </Grid>
                 <Grid item xs={6}>
-                  <Typography variant="body1" align="right">
+                  <Typography 
+                    variant="body1" 
+                    align="right"
+                    sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+                  >
                     {totals.taxAmount.toLocaleString()} VND
                   </Typography>
                 </Grid>
                 <Grid item xs={6}>
-                  <Typography variant="body1">Giảm giá ({formData.discountRate}%):</Typography>
+                  <Typography variant="body1" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
+                    Giảm giá ({formData.discountRate}%):
+                  </Typography>
                 </Grid>
                 <Grid item xs={6}>
-                  <Typography variant="body1" align="right" color="success.main">
+                  <Typography 
+                    variant="body1" 
+                    align="right" 
+                    color="success.main"
+                    sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+                  >
                     -{totals.discountAmount.toLocaleString()} VND
                   </Typography>
                 </Grid>
@@ -552,10 +648,20 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
                   <Divider />
                 </Grid>
                 <Grid item xs={6}>
-                  <Typography variant="h6">Tổng cộng:</Typography>
+                  <Typography 
+                    variant="h6"
+                    sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}
+                  >
+                    Tổng cộng:
+                  </Typography>
                 </Grid>
                 <Grid item xs={6}>
-                  <Typography variant="h6" align="right" color="primary.main">
+                  <Typography 
+                    variant="h6" 
+                    align="right" 
+                    color="primary.main"
+                    sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}
+                  >
                     {totals.totalAmount.toLocaleString()} VND
                   </Typography>
                 </Grid>
@@ -565,8 +671,25 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
         </Grid>
       </DialogContent>
 
-      <DialogActions sx={{ p: 2 }}>
-        <Button onClick={onClose} disabled={isSubmitting}>
+      <DialogActions 
+        sx={{ 
+          p: { xs: 1.5, sm: 2 }, 
+          flexDirection: 'row', 
+          gap: 1,
+          position: 'sticky',
+          bottom: 30,
+          backgroundColor: 'background.paper',
+          borderTop: '1px solid',
+          borderColor: 'divider',
+          zIndex: 1
+        }}
+      >
+        <Button 
+          onClick={onClose} 
+          disabled={isSubmitting}
+          fullWidth
+          size="small"
+        >
           Hủy
         </Button>
         <Button
@@ -574,6 +697,8 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
           variant="contained"
           disabled={isSubmitting || items.length === 0}
           startIcon={isSubmitting ? <CircularProgress size={20} /> : null}
+          fullWidth
+          size="small"
         >
           {isSubmitting ? 'Đang lưu...' : (stockIn ? 'Cập nhật' : 'Tạo phiếu')}
         </Button>

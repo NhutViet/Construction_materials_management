@@ -48,6 +48,7 @@ interface FormData {
   discountRate: number;
   paymentMethod: 'cash' | 'online' | 'debt';
   paymentStatus: 'unpaid' | 'partial' | 'paid';
+  partialPaymentAmount: number;
   notes: string;
   deliveryDate: string;
 }
@@ -73,6 +74,7 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
     discountRate: 0,
     paymentMethod: 'cash',
     paymentStatus: 'unpaid',
+    partialPaymentAmount: 0,
     notes: '',
     deliveryDate: ''
   });
@@ -83,6 +85,7 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
     customerAddress?: string;
     items?: string;
     discountRate?: string;
+    partialPaymentAmount?: string;
     deliveryDate?: string;
   }>({});
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
@@ -100,6 +103,16 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
     }
   }, [dispatch, error]);
 
+  // Reset partial payment amount when payment status changes
+  useEffect(() => {
+    if (formData.paymentStatus !== 'partial') {
+      setFormData(prev => ({
+        ...prev,
+        partialPaymentAmount: 0
+      }));
+    }
+  }, [formData.paymentStatus]);
+
   const validateForm = (): boolean => {
     const newErrors: {
       customerName?: string;
@@ -107,6 +120,7 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
       customerAddress?: string;
       items?: string;
       discountRate?: string;
+      partialPaymentAmount?: string;
       deliveryDate?: string;
     } = {};
 
@@ -130,6 +144,17 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
 
     if (formData.discountRate < 0 || formData.discountRate > 100) {
       newErrors.discountRate = 'Giảm giá phải từ 0-100%';
+    }
+
+    if (formData.paymentStatus === 'partial') {
+      if (formData.partialPaymentAmount <= 0) {
+        newErrors.partialPaymentAmount = 'Số tiền thanh toán một phần phải lớn hơn 0';
+      } else {
+        const { totalAmount } = calculateTotals();
+        if (formData.partialPaymentAmount >= totalAmount) {
+          newErrors.partialPaymentAmount = 'Số tiền thanh toán một phần phải nhỏ hơn tổng tiền';
+        }
+      }
     }
 
     if (!formData.deliveryDate.trim()) {
@@ -289,6 +314,10 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
         discountRate: formData.discountRate,
         paymentMethod: formData.paymentMethod,
         paymentStatus: formData.paymentStatus,
+        paidAmount: formData.paymentStatus === 'partial' ? formData.partialPaymentAmount : 
+                   formData.paymentStatus === 'paid' ? totalAmount : 0,
+        remainingAmount: formData.paymentStatus === 'partial' ? totalAmount - formData.partialPaymentAmount :
+                        formData.paymentStatus === 'paid' ? 0 : totalAmount,
         notes: formData.notes,
         deliveryDate: formData.deliveryDate
       };
@@ -590,6 +619,26 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
           </FormControl>
         </Grid>
 
+        {formData.paymentStatus === 'partial' && (
+          <Grid item xs={12} md={3}>
+            <TextField
+              fullWidth
+              label="Số Tiền Thanh Toán Một Phần *"
+              type="number"
+              value={formData.partialPaymentAmount}
+              onChange={(e) => handleInputChange('partialPaymentAmount', parseFloat(e.target.value) || 0)}
+              error={!!errors.partialPaymentAmount}
+              helperText={errors.partialPaymentAmount || `Tối đa: ${calculateTotals().totalAmount.toLocaleString('vi-VN')}đ`}
+              inputProps={{ 
+                min: 0, 
+                max: calculateTotals().totalAmount,
+                step: 1000 
+              }}
+              placeholder="Nhập số tiền thanh toán"
+            />
+          </Grid>
+        )}
+
         <Grid item xs={12} md={6}>
           <TextField
             fullWidth
@@ -634,12 +683,26 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
                     <Typography color="error.main">-{discountAmount.toLocaleString('vi-VN')}đ</Typography>
                   </Box>
                   <Divider sx={{ my: 1 }} />
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                     <Typography variant="h6" fontWeight="bold">Tổng cộng:</Typography>
                     <Typography variant="h6" fontWeight="bold" color="primary">
                       {totalAmount.toLocaleString('vi-VN')}đ
                     </Typography>
                   </Box>
+                  {formData.paymentStatus === 'partial' && formData.partialPaymentAmount > 0 && (
+                    <>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography>Đã thanh toán:</Typography>
+                        <Typography color="success.main">{formData.partialPaymentAmount.toLocaleString('vi-VN')}đ</Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography>Còn lại:</Typography>
+                        <Typography color="warning.main" fontWeight="bold">
+                          {(totalAmount - formData.partialPaymentAmount).toLocaleString('vi-VN')}đ
+                        </Typography>
+                      </Box>
+                    </>
+                  )}
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center' }}>

@@ -75,6 +75,10 @@ const MaterialModal: React.FC<MaterialModalProps> = ({
       <DialogContent
         sx={{
           p: 0,
+          // Responsive padding for different screen sizes
+          '& .MuiBox-root': {
+            p: { xs: 2, sm: 2.5, md: 3 }, // Responsive padding
+          },
           '&::-webkit-scrollbar': {
             width: '8px',
           },
