@@ -165,7 +165,25 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
   };
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ p: 3 }}>
+    <Box 
+      component="form" 
+      onSubmit={handleSubmit} 
+      sx={{ 
+        p: { xs: 2, sm: 2.5, md: 3 }, // Responsive padding
+        // Mobile-specific adjustments
+        '& .MuiGrid-container': {
+          margin: { xs: 0, sm: 0 },
+        },
+        '& .MuiGrid-item': {
+          padding: { xs: '8px', sm: '12px', md: '16px' },
+        },
+        // Better spacing for mobile
+        '& .MuiTypography-subtitle1': {
+          mt: { xs: 1, sm: 1.5, md: 2 },
+          mb: { xs: 1, sm: 1.5, md: 2 },
+        }
+      }}
+    >
       <Typography variant="h6" gutterBottom>
         {material ? 'Chỉnh Sửa Sản Phẩm' : 'Thêm Sản Phẩm Mới'}
       </Typography>
@@ -315,7 +333,20 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
       </Grid>
 
       {/* Action Buttons */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 4 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'flex-end', 
+        gap: { xs: 1, sm: 2 }, 
+        mt: { xs: 3, sm: 4 },
+        flexDirection: { xs: 'column', sm: 'row' }, // Stack buttons on mobile
+        '& .MuiButton-root': {
+          minWidth: { xs: '100%', sm: 'auto' }, // Full width on mobile
+          order: { xs: 2, sm: 0 }, // Submit button first on mobile
+        },
+        '& .MuiButton-outlined': {
+          order: { xs: 1, sm: 0 }, // Cancel button second on mobile
+        }
+      }}>
         <Button
           variant="outlined"
           onClick={onClose}

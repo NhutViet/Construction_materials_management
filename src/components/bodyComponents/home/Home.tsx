@@ -18,32 +18,34 @@ export default class Home extends Component {
       <Box
         sx={{
           margin: 0,
-          padding: 3,
+          padding: { xs: 1, sm: 2, md: 3 },
         }}
       >
         {/* Dashboard Summary Cards */}
         <DashboardSummary />
 
         {/* Revenue Analysis Section */}
-        <Grid container sx={{ marginX: 3 }}>
-          <Grid item md={8}>
+        <Grid container spacing={{ xs: 2, md: 3 }} sx={{ mt: 2 }}>
+          <Grid item xs={12} md={8}>
             <RevenueChart />
           </Grid>
-          <Grid item md={4}>
+          <Grid item xs={12} md={4}>
             <RevenueByCategory />
           </Grid>
         </Grid>
 
         {/* Material Analysis Section */}
-        <Grid container sx={{ margin: 3 }}>
-          <Grid item md={6}>
+        <Grid container spacing={{ xs: 2, md: 3 }} sx={{ mt: 2 }}>
+          {/* <Grid item xs={12} md={6}>
             <MaterialUsageChart />
-          </Grid>
-          <Grid item md={6}>
+          </Grid> */}
+          <Grid item xs={12} md={6}>
             <TopSellingMaterials />
           </Grid>
         </Grid>
 
+        {/* Responsive Test Section - Uncomment to test */}
+        {/* <ResponsiveTest /> */}
       
       </Box>
     );

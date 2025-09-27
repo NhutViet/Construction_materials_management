@@ -1,7 +1,8 @@
 import React from "react";
-import { Box, Grid, Paper, Typography, Chip } from "@mui/material";
+import { Box, Grid, Paper, Typography, Chip, Tooltip } from "@mui/material";
 import { TrendingUp, TrendingDown, Inventory, AttachMoney, Payment, Schedule } from "@mui/icons-material";
 import { StockInAnalytics } from "../../../store/slices/analyticsSlice";
+import { getShortCurrencyWords } from "../../../utils/numberToWords";
 
 interface StockInStatsProps {
   stockInData?: StockInAnalytics | null;
@@ -17,9 +18,10 @@ interface StatCardProps {
     isPositive: boolean;
   };
   subtitle?: string;
+  isMoney?: boolean;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, trend, subtitle }) => {
+const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, trend, subtitle, isMoney = false }) => {
   const getColorValue = (color: string) => {
     switch (color) {
       case "success":
@@ -37,6 +39,21 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, trend, s
     }
   };
 
+  // Extract numeric value from formatted number string
+  const getNumericValue = (val: string | number): number => {
+    if (typeof val === 'number') return val;
+    const cleanStr = val.replace(/[^\d]/g, '');
+    return parseInt(cleanStr) || 0;
+  };
+
+  // Get currency words for money values
+  const getCurrencyWords = (val: string | number): string => {
+    if (!isMoney) return '';
+    const numericValue = getNumericValue(val);
+    if (numericValue === 0) return '';
+    return getShortCurrencyWords(numericValue);
+  };
+
   return (
     <Paper elevation={2} sx={{ p: 3, height: '100%' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -52,9 +69,28 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, trend, s
           {icon}
         </Box>
         <Box sx={{ flex: 1 }}>
+          <Box sx={{flexDirection:"row", display:"flex", alignItems:"center", justifyContent:"space-between"}}>
           <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
             {value}
           </Typography>
+          {isMoney && getCurrencyWords(value) && (
+            <Tooltip title={getCurrencyWords(value)} arrow placement="top">
+              <Typography 
+                variant="caption"
+                sx={{ 
+                  fontSize: '0.7rem',
+                  color: 'text.secondary',
+                  fontStyle: 'italic',
+                  display: 'block',
+                  mt: 0.5,
+                  cursor: 'help'
+                }}
+              >
+                {getCurrencyWords(value)}
+              </Typography>
+            </Tooltip>
+          )}
+          </Box>
           <Typography variant="body2" color="text.secondary">
             {title}
           </Typography>
@@ -88,6 +124,7 @@ const StockInStats: React.FC<StockInStatsProps> = ({ stockInData }) => {
       icon: <Inventory />,
       color: "primary" as const,
       subtitle: "Tổng số phiếu nhập hàng",
+      isMoney: false,
     },
     {
       title: "Tổng giá trị",
@@ -95,6 +132,7 @@ const StockInStats: React.FC<StockInStatsProps> = ({ stockInData }) => {
       icon: <AttachMoney />,
       color: "success" as const,
       subtitle: "Tổng giá trị nhập hàng",
+      isMoney: true,
     },
     {
       title: "Đã thanh toán",
@@ -102,6 +140,7 @@ const StockInStats: React.FC<StockInStatsProps> = ({ stockInData }) => {
       icon: <Payment />,
       color: "info" as const,
       subtitle: "Số tiền đã thanh toán",
+      isMoney: true,
     },
     {
       title: "Còn nợ",
@@ -109,6 +148,7 @@ const StockInStats: React.FC<StockInStatsProps> = ({ stockInData }) => {
       icon: <Schedule />,
       color: "warning" as const,
       subtitle: "Số tiền còn nợ",
+      isMoney: true,
     },
     {
       title: "Giá trị TB",
@@ -116,6 +156,7 @@ const StockInStats: React.FC<StockInStatsProps> = ({ stockInData }) => {
       icon: <TrendingUp />,
       color: "secondary" as const,
       subtitle: "Giá trị trung bình mỗi lần nhập",
+      isMoney: true,
     },
   ];
 

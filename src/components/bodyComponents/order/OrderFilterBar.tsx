@@ -16,7 +16,9 @@ import {
   Search as SearchIcon,
   Clear as ClearIcon,
   FilterList as FilterIcon,
-  DateRange as DateRangeIcon
+  DateRange as DateRangeIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon
 } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../../store';
@@ -32,6 +34,9 @@ const OrderFilterBar: React.FC = () => {
     invoiceNumber: filters.invoiceNumber || '',
     customerName: filters.customerName || ''
   });
+
+  // State for filter visibility
+  const [isFilterExpanded, setIsFilterExpanded] = useState(false);
 
   // Get unique values from invoices for filter options
   const statuses = [...new Set(invoices.map(inv => inv.status).filter(Boolean))];
@@ -73,145 +78,165 @@ const OrderFilterBar: React.FC = () => {
     dispatch(clearFilters());
   };
 
+  const toggleFilterExpansion = () => {
+    setIsFilterExpanded(!isFilterExpanded);
+  };
+
   const hasActiveFilters = filters.status || filters.paymentStatus || filters.paymentMethod || 
                           filters.customerName || filters.invoiceNumber || filters.startDate || filters.endDate;
 
   return (
     <Box sx={{ mb: 3, p: 2, backgroundColor: 'grey.50', borderRadius: 2 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        <FilterIcon sx={{ mr: 1, color: 'primary.main' }} />
-        <Typography variant="h6" color="primary">
-          Bộ Lọc Hóa Đơn
-        </Typography>
-        {hasActiveFilters && (
-          <Chip
-            label="Có bộ lọc"
-            color="primary"
-            size="small"
-            sx={{ ml: 2 }}
-          />
-        )}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <FilterIcon sx={{ mr: 1, color: 'primary.main' }} />
+          <Typography variant="h6" color="primary">
+            Bộ Lọc Hóa Đơn
+          </Typography>
+          {hasActiveFilters && (
+            <Chip
+              label="Có bộ lọc"
+              color="primary"
+              size="small"
+              sx={{ ml: 2 }}
+            />
+          )}
+        </Box>
+        <IconButton
+          onClick={toggleFilterExpansion}
+          color="primary"
+          sx={{ 
+            transition: 'transform 0.2s ease-in-out',
+            transform: isFilterExpanded ? 'rotate(180deg)' : 'rotate(0deg)'
+          }}
+        >
+          {isFilterExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+        </IconButton>
       </Box>
 
-      <Grid container spacing={2} alignItems="center">
-        {/* Search by Invoice Number */}
-        <Grid item xs={12} md={3}>
-          <TextField
-            fullWidth
-            label="Số hóa đơn"
-            value={localFilters.invoiceNumber}
-            onChange={(e) => handleTextFilterChange('invoiceNumber', e.target.value)}
-            InputProps={{
-              startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
-            }}
-            placeholder="Nhập số hóa đơn..."
-            size="small"
-          />
-        </Grid>
+      {isFilterExpanded && (
+        <>
+          <Grid container spacing={2} alignItems="center">
+            {/* Search by Invoice Number */}
+            <Grid item xs={12} md={3}>
+              <TextField
+                fullWidth
+                label="Số hóa đơn"
+                value={localFilters.invoiceNumber}
+                onChange={(e) => handleTextFilterChange('invoiceNumber', e.target.value)}
+                InputProps={{
+                  startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                }}
+                placeholder="Nhập số hóa đơn..."
+                size="small"
+              />
+            </Grid>
 
-        {/* Search by Customer Name */}
-        <Grid item xs={12} md={3}>
-          <TextField
-            fullWidth
-            label="Tên khách hàng"
-            value={localFilters.customerName}
-            onChange={(e) => handleTextFilterChange('customerName', e.target.value)}
-            InputProps={{
-              startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
-            }}
-            placeholder="Nhập tên khách hàng..."
-            size="small"
-          />
-        </Grid>
+            {/* Search by Customer Name */}
+            <Grid item xs={12} md={3}>
+              <TextField
+                fullWidth
+                label="Tên khách hàng"
+                value={localFilters.customerName}
+                onChange={(e) => handleTextFilterChange('customerName', e.target.value)}
+                InputProps={{
+                  startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                }}
+                placeholder="Nhập tên khách hàng..."
+                size="small"
+              />
+            </Grid>
 
-        {/* Status Filter */}
-        <Grid item xs={12} md={2}>
-          <FormControl fullWidth size="small">
-            <InputLabel>Trạng thái</InputLabel>
-            <Select
-              value={filters.status || ''}
-              onChange={(e) => handleFilterChange('status', e.target.value)}
-              label="Trạng thái"
-            >
-              <MenuItem value="">Tất cả trạng thái</MenuItem>
-              <MenuItem value="pending">Chờ xử lý</MenuItem>
-              <MenuItem value="confirmed">Đã xác nhận</MenuItem>
-              <MenuItem value="delivered">Đã giao</MenuItem>
-              <MenuItem value="cancelled">Đã hủy</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
+            {/* Status Filter */}
+            <Grid item xs={12} md={2}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Trạng thái</InputLabel>
+                <Select
+                  value={filters.status || ''}
+                  onChange={(e) => handleFilterChange('status', e.target.value)}
+                  label="Trạng thái"
+                >
+                  <MenuItem value="">Tất cả trạng thái</MenuItem>
+                  <MenuItem value="pending">Chờ xử lý</MenuItem>
+                  <MenuItem value="confirmed">Đã xác nhận</MenuItem>
+                  <MenuItem value="delivered">Đã giao</MenuItem>
+                  <MenuItem value="cancelled">Đã hủy</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
 
-        {/* Payment Status Filter */}
-        <Grid item xs={12} md={2}>
-          <FormControl fullWidth size="small">
-            <InputLabel>Thanh toán</InputLabel>
-            <Select
-              value={filters.paymentStatus || ''}
-              onChange={(e) => handleFilterChange('paymentStatus', e.target.value)}
-              label="Thanh toán"
-            >
-              <MenuItem value="">Tất cả thanh toán</MenuItem>
-              <MenuItem value="unpaid">Chưa thanh toán</MenuItem>
-              <MenuItem value="partial">Thanh toán một phần</MenuItem>
-              <MenuItem value="paid">Đã thanh toán</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
+            {/* Payment Status Filter */}
+            <Grid item xs={12} md={2}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Thanh toán</InputLabel>
+                <Select
+                  value={filters.paymentStatus || ''}
+                  onChange={(e) => handleFilterChange('paymentStatus', e.target.value)}
+                  label="Thanh toán"
+                >
+                  <MenuItem value="">Tất cả thanh toán</MenuItem>
+                  <MenuItem value="unpaid">Chưa thanh toán</MenuItem>
+                  <MenuItem value="partial">Thanh toán một phần</MenuItem>
+                  <MenuItem value="paid">Đã thanh toán</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
 
-        {/* Payment Method Filter */}
-        <Grid item xs={12} md={2}>
-          <FormControl fullWidth size="small">
-            <InputLabel>Phương thức</InputLabel>
-            <Select
-              value={filters.paymentMethod || ''}
-              onChange={(e) => handleFilterChange('paymentMethod', e.target.value)}
-              label="Phương thức"
-            >
-              <MenuItem value="">Tất cả phương thức</MenuItem>
-              <MenuItem value="cash">Tiền mặt</MenuItem>
-              <MenuItem value="online">Chuyển khoản</MenuItem>
-              <MenuItem value="debt">Công nợ</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-      </Grid>
+            {/* Payment Method Filter */}
+            <Grid item xs={12} md={2}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Phương thức</InputLabel>
+                <Select
+                  value={filters.paymentMethod || ''}
+                  onChange={(e) => handleFilterChange('paymentMethod', e.target.value)}
+                  label="Phương thức"
+                >
+                  <MenuItem value="">Tất cả phương thức</MenuItem>
+                  <MenuItem value="cash">Tiền mặt</MenuItem>
+                  <MenuItem value="online">Chuyển khoản</MenuItem>
+                  <MenuItem value="debt">Công nợ</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
 
-      {/* Date Range Filters */}
-      <Grid container spacing={2} alignItems="center" sx={{ mt: 1 }}>
-        <Grid item xs={12} md={3}>
-          <TextField
-            fullWidth
-            label="Từ ngày"
-            type="date"
-            value={filters.startDate || ''}
-            onChange={(e) => handleFilterChange('startDate', e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            size="small"
-          />
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <TextField
-            fullWidth
-            label="Đến ngày"
-            type="date"
-            value={filters.endDate || ''}
-            onChange={(e) => handleFilterChange('endDate', e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            size="small"
-          />
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <Button
-            variant="outlined"
-            startIcon={<ClearIcon />}
-            onClick={handleClearFilters}
-            sx={{ height: '40px' }}
-          >
-            Xóa tất cả bộ lọc
-          </Button>
-        </Grid>
-      </Grid>
+          {/* Date Range Filters */}
+          <Grid container spacing={2} alignItems="center" sx={{ mt: 1 }}>
+            <Grid item xs={12} md={3}>
+              <TextField
+                fullWidth
+                label="Từ ngày"
+                type="date"
+                value={filters.startDate || ''}
+                onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                size="small"
+              />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <TextField
+                fullWidth
+                label="Đến ngày"
+                type="date"
+                value={filters.endDate || ''}
+                onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                size="small"
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Button
+                variant="outlined"
+                startIcon={<ClearIcon />}
+                onClick={handleClearFilters}
+                sx={{ height: '40px' }}
+              >
+                Xóa tất cả bộ lọc
+              </Button>
+            </Grid>
+          </Grid>
+        </>
+      )}
 
       {/* Active Filters Display */}
       {hasActiveFilters && (

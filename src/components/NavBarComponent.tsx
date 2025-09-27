@@ -26,6 +26,8 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import {
   NotificationsOutlined,
@@ -34,6 +36,7 @@ import {
   AccountCircleOutlined,
   MarkAsUnread,
   Delete,
+  Menu as MenuIcon,
 } from "@mui/icons-material";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -61,10 +64,16 @@ import {
 } from "../store/slices/notificationSlice";
 import { useNotificationPolling } from "../hooks/useNotificationPolling";
 
-const NavBarComponent: React.FC = () => {
+interface NavBarComponentProps {
+  onMenuClick?: () => void;
+}
+
+const NavBarComponent: React.FC<NavBarComponentProps> = ({ onMenuClick }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((state: RootState) => state.auth);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
   // Notification state
   const notifications = useSelector(selectNotifications);
@@ -305,7 +314,15 @@ const NavBarComponent: React.FC = () => {
     <Grid container>
       <Grid item md={12}>
         <Paper elevation={4}>
-          <AppBar sx={{ padding: 2 }} position="static">
+          <AppBar 
+            sx={{ 
+              padding: { xs: 1, sm: 2 },
+              height: '64px',
+              display: 'flex',
+              justifyContent: 'center'
+            }} 
+            position="static"
+          >
             <Container maxWidth="xl">
               <Box
                 sx={{
@@ -314,21 +331,37 @@ const NavBarComponent: React.FC = () => {
                   alignItems: "center",
                 }}
               >
-                  <Typography
-                    variant="h6"
-                    component="a"
-                    href="/dashboard"
-                    sx={{
-                      mx: 2,
-                      display: { xs: "none", md: "flex" },
-                      fontWeight: 700,
-                      letterSpacing: ".2rem",
-                      color: "inherit",
-                      textDecoration: "none",
-                    }}
+                {/* Mobile Menu Button */}
+                {isMobile && (
+                  <IconButton
+                    color="inherit"
+                    aria-label="open drawer"
+                    edge="start"
+                    onClick={onMenuClick}
+                    sx={{ mr: 2 }}
                   >
-                    Hệ thống quản lý vật liệu xây dựng
-                  </Typography>
+                    <MenuIcon />
+                  </IconButton>
+                )}
+
+                <Typography
+                  variant="h6"
+                  component="a"
+                  href="/dashboard"
+                  sx={{
+                    mx: 2,
+                    display: { xs: isMobile ? "block" : "none", md: "flex" },
+                    fontWeight: 700,
+                    letterSpacing: ".2rem",
+                    color: "inherit",
+                    textDecoration: "none",
+                    fontSize: { xs: "1rem", sm: "1.25rem", md: "1.5rem" },
+                    flex: 1,
+                    textAlign: { xs: "center", md: "left" }
+                  }}
+                >
+                  {isMobile ? "QL Vật liệu" : "Hệ thống quản lý vật liệu xây dựng"}
+                </Typography>
 
                 <Box
                   sx={{

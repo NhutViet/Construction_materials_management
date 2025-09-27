@@ -21,37 +21,55 @@ export default function Order() {
   };
 
   return (
-    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ 
+      minHeight: '100vh', 
+      display: 'flex', 
+      flexDirection: 'column',
+      p: { xs: 1, sm: 2, md: 3 }
+    }}>
       <Box
         sx={{
-          mx: 3,
-          mt: 3,
           bgcolor: "white",
           borderRadius: 2,
-          padding: 3,
+          padding: { xs: 2, sm: 3 },
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          boxShadow: 1
         }}
       >
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          
-        <Typography variant="h5" sx={{ mb: 3, fontWeight: "bold" }}>
-          Hoá đơn
-        </Typography>
-        <Box>
-        <Button 
-          variant="contained" 
-          color="primary"
-          startIcon={<AddIcon />}
-          onClick={handleOpenCreateModal}
-          sx={{ fontSize: '1rem', py: 1.5 }}
-        >
-          Thêm Hoá Đơn
-        </Button>
-        </Box>
-
+        <Box sx={{ 
+          display: "flex", 
+          justifyContent: "space-between", 
+          alignItems: { xs: "flex-start", sm: "center" },
+          flexDirection: { xs: "column", sm: "row" },
+          gap: { xs: 2, sm: 0 },
+          mb: { xs: 2, sm: 3 }
+        }}>
+          <Typography 
+            variant="h5" 
+            sx={{ 
+              fontWeight: "bold",
+              fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem' }
+            }}
+          >
+            Hoá đơn
+          </Typography>
+          <Button 
+            variant="contained" 
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={handleOpenCreateModal}
+            sx={{ 
+              fontSize: { xs: '0.875rem', sm: '1rem' }, 
+              py: { xs: 1, sm: 1.5 },
+              px: { xs: 2, sm: 3 },
+              width: { xs: '100%', sm: 'auto' }
+            }}
+          >
+            Thêm Hoá Đơn
+          </Button>
         </Box>
         <Box sx={{ flex: 1, overflow: 'hidden' }}>
           <OrderList />

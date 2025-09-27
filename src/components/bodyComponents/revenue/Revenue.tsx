@@ -154,27 +154,39 @@ const Revenue: React.FC = () => {
   const revenueCards = getRevenueCards();
 
   return (
-    <Box sx={{ p: 3, mx: 3 }}>
-
-      <Grid container sx={{ mx: 4 }}>
+    <Box sx={{ 
+    
+      width: '100%',
+      maxWidth: '100%',
+      overflow: 'hidden'
+    }}>
+      {/* Revenue Cards - Responsive Grid */}
+      <Grid container spacing={{ xs: 1, sm: 2, md: 3 }} sx={{ mx: { xs: 0, sm: 1, md: 2 } }}>
         {revenueCards.map((card, index) => (
-          <Grid item md={3} key={index}>
-            <Box m={4}>
+          <Grid item xs={12} sm={6} md={3} key={index}>
+            <Box sx={{ 
+              m: { xs: 0.5, sm: 1, md: 2 },
+              height: '100%'
+            }}>
               <RevenueCard card={card} />
             </Box>
           </Grid>
         ))}
       </Grid>
-      <Grid container sx={{ mx: 4 }}>
-        <Grid item md={12}>
+
+      {/* Revenue Cost Chart - Full width on mobile */}
+      <Grid container sx={{ mx: { xs: 0, sm: 1, md: 2 }, mt: 5 }}>
+        <Grid item xs={12}>
           <RevenueCostChart revenueData={revenueAnalytics} />
         </Grid>
       </Grid>
-      <Grid container sx={{ mx: 4 }}>
-        <Grid item md={6}>
+
+      {/* Charts Row - Stack on mobile, side by side on desktop */}
+      <Grid container spacing={{ xs: 1, sm: 2, md: 3 }} sx={{ mx: { xs: 0, sm: 1, md: 2 }, mt: 2 }}>
+        <Grid item xs={12} md={6}>
           <BestSelledProductChart inventoryData={inventoryAnalytics} />
         </Grid>
-        <Grid item md={6}>
+        <Grid item xs={12} md={6}>
           <BestSelledProductChartBar inventoryData={inventoryAnalytics} />
         </Grid>
       </Grid>
