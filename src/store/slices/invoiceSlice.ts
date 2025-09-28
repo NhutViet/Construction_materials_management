@@ -10,6 +10,9 @@ export interface InvoiceItem {
   unitPrice: number;
   totalPrice: number;
   unit: string;
+  deliveredQuantity?: number;
+  deliveryStatus?: 'pending' | 'partial' | 'delivered';
+  deliveredAt?: string;
 }
 
 export interface Invoice {
@@ -90,6 +93,63 @@ export interface ProcessPaymentDto {
   paymentMethod?: string;
 }
 
+export interface UpdateItemDeliveryDto {
+  deliveredQuantity: number;
+  notes?: string;
+}
+
+export interface DeliveryStatus {
+  totalItems: number;
+  deliveredItems: number;
+  partialItems: number;
+  pendingItems: number;
+  totalQuantity: number;
+  deliveredQuantity: number;
+  remainingQuantity: number;
+  items: {
+    index: number;
+    materialName: string;
+    quantity: number;
+    deliveredQuantity: number;
+    remainingQuantity: number;
+    deliveryStatus: 'pending' | 'partial' | 'delivered';
+    deliveredAt?: string;
+    unit: string;
+  }[];
+}
+
+export interface DeliveredAmount {
+  invoiceId: string;
+  invoiceNumber: string;
+  customerName: string;
+  totalOrderedAmount: number;
+  deliveredAmount: number;
+  remainingAmount: number;
+  totalOrderedQuantity: number;
+  totalDeliveredQuantity: number;
+  deliveryPercentage: number;
+  deliveredAmountPercentage: number;
+  deliveredItems: {
+    materialId: string;
+    materialName: string;
+    unit: string;
+    orderedQuantity: number;
+    deliveredQuantity: number;
+    remainingQuantity: number;
+    unitPrice: number;
+    deliveredAmount: number;
+    deliveryStatus: 'pending' | 'partial' | 'delivered';
+    deliveredAt?: string;
+  }[];
+  summary: {
+    totalItems: number;
+    deliveredItems: number;
+    pendingItems: number;
+    partialItems: number;
+    fullyDeliveredItems: number;
+  };
+}
+
 export interface InvoiceQueryDto {
   status?: string;
   paymentStatus?: string;
@@ -135,6 +195,9 @@ export interface InvoiceState {
   filters: InvoiceQueryDto;
   statistics: InvoiceStatistics | null;
   paymentMethods: PaymentMethodOption[];
+  deliveryStatus: DeliveryStatus | null;
+  deliveredAmount: DeliveredAmount | null;
+  deliveredAmountLoading: boolean;
   pagination: {
     page: number;
     limit: number;
@@ -154,6 +217,9 @@ const initialState: InvoiceState = {
   },
   statistics: null,
   paymentMethods: [],
+  deliveryStatus: null,
+  deliveredAmount: null,
+  deliveredAmountLoading: false,
   pagination: {
     page: 1,
     limit: 10,
@@ -370,6 +436,90 @@ export const fetchInvoicesByPaymentMethod = createAsyncThunk(
   }
 );
 
+export const updateItemDelivery = createAsyncThunk(
+  'invoice/updateItemDelivery',
+  async ({ id, itemIndex, data }: { id: string; itemIndex: number; data: UpdateItemDeliveryDto }, { rejectWithValue }) => {
+    try {
+      const response = await AxiosInstance().patch(`/invoices/${id}/items/${itemIndex}/delivery`, data);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to update item delivery');
+    }
+  }
+);
+
+export const fetchDeliveryStatus = createAsyncThunk(
+  'invoice/fetchDeliveryStatus',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const response = await AxiosInstance().get(`/invoices/${id}/delivery-status`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch delivery status');
+    }
+  }
+);
+
+export const debugInvoice = createAsyncThunk(
+  'invoice/debugInvoice',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const response = await AxiosInstance().get(`/invoices/${id}/debug`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to debug invoice');
+    }
+  }
+);
+
+export const getInvoiceForPrint = createAsyncThunk(
+  'invoice/getInvoiceForPrint',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const response = await AxiosInstance().get(`/invoices/${id}/print`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to get invoice for print');
+    }
+  }
+);
+
+export const sendInvoiceByEmail = createAsyncThunk(
+  'invoice/sendInvoiceByEmail',
+  async ({ id, emailData }: { id: string; emailData: { email: string } }, { rejectWithValue }) => {
+    try {
+      const response = await AxiosInstance().post(`/invoices/${id}/send-email`, emailData);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to send invoice by email');
+    }
+  }
+);
+
+export const exportInvoiceToPDF = createAsyncThunk(
+  'invoice/exportInvoiceToPDF',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const response = await AxiosInstance().get(`/invoices/${id}/export-pdf`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to export invoice to PDF');
+    }
+  }
+);
+
+export const fetchDeliveredAmount = createAsyncThunk(
+  'invoice/fetchDeliveredAmount',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const response = await AxiosInstance().get(`/invoices/${id}/delivered-amount`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch delivered amount');
+    }
+  }
+);
+
 const invoiceSlice = createSlice({
   name: 'invoice',
   initialState,
@@ -405,6 +555,18 @@ const invoiceSlice = createSlice({
     },
     resetState: (state) => {
       return initialState;
+    },
+    setDeliveryStatus: (state, action: PayloadAction<DeliveryStatus | null>) => {
+      state.deliveryStatus = action.payload;
+    },
+    clearDeliveryStatus: (state) => {
+      state.deliveryStatus = null;
+    },
+    setDeliveredAmount: (state, action: PayloadAction<DeliveredAmount | null>) => {
+      state.deliveredAmount = action.payload;
+    },
+    clearDeliveredAmount: (state) => {
+      state.deliveredAmount = null;
     },
   },
   extraReducers: (builder) => {
@@ -751,6 +913,121 @@ const invoiceSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       });
+
+    // Update item delivery
+    builder
+      .addCase(updateItemDelivery.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(updateItemDelivery.fulfilled, (state, action: PayloadAction<Invoice>) => {
+        state.isLoading = false;
+        const index = state.invoices.findIndex(inv => inv._id === action.payload._id);
+        const allIndex = state.allInvoices.findIndex(inv => inv._id === action.payload._id);
+        if (index !== -1) {
+          state.invoices[index] = action.payload;
+        }
+        if (allIndex !== -1) {
+          state.allInvoices[allIndex] = action.payload;
+        }
+        if (state.selectedInvoice?._id === action.payload._id) {
+          state.selectedInvoice = action.payload;
+        }
+      })
+      .addCase(updateItemDelivery.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      });
+
+    // Fetch delivery status
+    builder
+      .addCase(fetchDeliveryStatus.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchDeliveryStatus.fulfilled, (state, action: PayloadAction<DeliveryStatus>) => {
+        state.isLoading = false;
+        state.deliveryStatus = action.payload;
+      })
+      .addCase(fetchDeliveryStatus.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      });
+
+    // Debug invoice
+    builder
+      .addCase(debugInvoice.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(debugInvoice.fulfilled, (state, action: PayloadAction<Invoice>) => {
+        state.isLoading = false;
+        state.selectedInvoice = action.payload;
+      })
+      .addCase(debugInvoice.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      });
+
+    // Get invoice for print
+    builder
+      .addCase(getInvoiceForPrint.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(getInvoiceForPrint.fulfilled, (state, action: PayloadAction<Invoice>) => {
+        state.isLoading = false;
+        state.selectedInvoice = action.payload;
+      })
+      .addCase(getInvoiceForPrint.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      });
+
+    // Send invoice by email
+    builder
+      .addCase(sendInvoiceByEmail.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(sendInvoiceByEmail.fulfilled, (state, action) => {
+        state.isLoading = false;
+        // Email sent successfully - no state changes needed
+      })
+      .addCase(sendInvoiceByEmail.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      });
+
+    // Export invoice to PDF
+    builder
+      .addCase(exportInvoiceToPDF.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(exportInvoiceToPDF.fulfilled, (state, action) => {
+        state.isLoading = false;
+        // PDF exported successfully - no state changes needed
+      })
+      .addCase(exportInvoiceToPDF.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      });
+
+    // Fetch delivered amount
+    builder
+      .addCase(fetchDeliveredAmount.pending, (state) => {
+        state.deliveredAmountLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchDeliveredAmount.fulfilled, (state, action: PayloadAction<DeliveredAmount>) => {
+        state.deliveredAmountLoading = false;
+        state.deliveredAmount = action.payload;
+      })
+      .addCase(fetchDeliveredAmount.rejected, (state, action) => {
+        state.deliveredAmountLoading = false;
+        state.error = action.payload as string;
+      });
   },
 });
 
@@ -762,6 +1039,10 @@ export const {
   setLimit,
   clearError,
   resetState,
+  setDeliveryStatus,
+  clearDeliveryStatus,
+  setDeliveredAmount,
+  clearDeliveredAmount,
 } = invoiceSlice.actions;
 
 export default invoiceSlice.reducer;
@@ -776,6 +1057,8 @@ export const selectInvoicesFilters = (state: { invoice: InvoiceState }) => state
 export const selectInvoicesPagination = (state: { invoice: InvoiceState }) => state.invoice.pagination;
 export const selectInvoiceStatistics = (state: { invoice: InvoiceState }) => state.invoice.statistics;
 export const selectPaymentMethods = (state: { invoice: InvoiceState }) => state.invoice.paymentMethods;
+export const selectDeliveryStatus = (state: { invoice: InvoiceState }) => state.invoice.deliveryStatus;
+export const selectDeliveredAmount = (state: { invoice: InvoiceState }) => state.invoice.deliveredAmount;
 
 // Client-side filtering selector
 export const selectFilteredInvoices = (state: { invoice: InvoiceState }) => {

@@ -33,7 +33,7 @@ import { AppDispatch, RootState } from '../../../store';
 import { createInvoice, clearError } from '../../../store/slices/invoiceSlice';
 import { fetchMaterials } from '../../../store/slices/materialSlice';
 import { CreateInvoiceDto, InvoiceItem } from '../../../store/slices/invoiceSlice';
-import { checkLowStockAndNotify, sendInvoiceCreationNotification } from '../../../utils/notificationUtils';
+import { sendInvoiceCreationNotification } from '../../../utils/notificationUtils';
 
 interface CreateInvoiceFormProps {
   onClose: () => void;
@@ -329,11 +329,6 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
       
       // Send invoice creation notification
       await sendInvoiceCreationNotification(dispatch, createdInvoice);
-      
-      // Check for low stock and send notifications with updated materials
-      const updatedMaterials = await dispatch(fetchMaterials()).unwrap();
-      console.log('Checking low stock with updated materials:', updatedMaterials.length, 'materials');
-      await checkLowStockAndNotify(dispatch, createdInvoice, updatedMaterials);
       
       onSuccess?.();
       onClose();
