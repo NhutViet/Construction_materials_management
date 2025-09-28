@@ -48,7 +48,7 @@ export default function OrderList() {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'pending': return 'Chờ xử lý';
-      case 'confirmed': return 'Đã xác nhận';
+      case 'confirmed': return 'Đã giao một phần';
       case 'shipped': return 'Đã giao hàng';
       case 'delivered': return 'Đã giao';
       case 'cancelled': return 'Đã hủy';
