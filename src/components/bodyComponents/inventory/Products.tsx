@@ -109,8 +109,19 @@ const Products: React.FC = () => {
       ),
     },
     {
+      key: "importCost",
+      title: "Giá Nhập",
+      width: 120,
+      align: "right",
+      render: (val) => (
+        <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'warning.main', fontSize: '1rem' }}>
+          {val ? `${val.toLocaleString()} VND` : 'N/A'}
+        </Typography>
+      ),
+    },
+    {
       key: "price",
-      title: "Giá",
+      title: "Giá Bán",
       width: 120,
       align: "right",
       render: (val) => (
@@ -187,10 +198,18 @@ const Products: React.FC = () => {
         </Box>
         <Box sx={{display: 'flex', flexDirection: 'row', gap: 1}}>
           <Typography variant="subtitle1" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
-            Tồn Kho Tối Đa:
+            Giá Nhập:
           </Typography>
-          <Typography variant="body1" sx={{ fontSize: '1rem' }}>
-            {row.maxStock || 'N/A'}
+          <Typography variant="body1" sx={{ fontSize: '1rem', fontWeight: 'bold', color: 'warning.main' }}>
+            {row.importCost ? `${row.importCost.toLocaleString()} VND` : 'N/A'}
+          </Typography>
+        </Box>
+        <Box sx={{display: 'flex', flexDirection: 'row', gap: 1}}>
+          <Typography variant="subtitle1" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
+            Giá Bán:
+          </Typography>
+          <Typography variant="body1" sx={{ fontSize: '1rem', fontWeight: 'bold', color: 'success.main' }}>
+            {row.price ? `${row.price.toLocaleString()} VND` : 'N/A'}
           </Typography>
         </Box>
 

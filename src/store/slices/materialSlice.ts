@@ -8,9 +8,10 @@ export interface Material {
   name: string;
   category: string;
   price: number;
+  importCost: number; // Tiền nhập hàng
   quantity: number;
   unit: string;
-  supplier: string;
+  supplier?: string;
   description?: string;
   minStock?: number;
   maxStock?: number;
@@ -344,6 +345,9 @@ export const selectMaterialsStats = (state: { materials: MaterialState }) => {
     lowStock: lowStockMaterials.length,
     categories: [...new Set(materials.map(m => m.category))].length,
     totalValue: materials.reduce((sum, m) => sum + (m.price * m.quantity), 0),
+    totalImportCost: materials.reduce((sum, m) => sum + (m.importCost * m.quantity), 0),
     averagePrice: materials.length > 0 ? materials.reduce((sum, m) => sum + m.price, 0) / materials.length : 0,
+    averageImportCost: materials.length > 0 ? materials.reduce((sum, m) => sum + m.importCost, 0) / materials.length : 0,
+    totalProfit: materials.reduce((sum, m) => sum + ((m.price - m.importCost) * m.quantity), 0),
   };
 };

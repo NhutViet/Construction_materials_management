@@ -139,7 +139,34 @@ const NavBarComponent: React.FC<NavBarComponentProps> = ({ onMenuClick }) => {
   // Handle notification click
   const handleNotificationClick = async (notification: Notification) => {
     if (notification.status === NotificationStatus.UNREAD) {
-      dispatch(markAsRead(notification._id));
+      try {
+        console.log('Marking notification as read:', notification._id, notification);
+        
+        // Validate ID before making API call
+        if (!notification._id || notification._id.trim() === '') {
+          console.error('Invalid notification ID:', notification._id);
+          setSnackbarMessage('ID thông báo không hợp lệ');
+          setSnackbarSeverity('error');
+          setSnackbarOpen(true);
+          return;
+        }
+        
+        await dispatch(markAsRead(notification._id)).unwrap();
+        console.log('Successfully marked notification as read');
+        // Optionally show success message
+        // setSnackbarMessage('Đã đánh dấu thông báo là đã đọc');
+        // setSnackbarSeverity('success');
+        // setSnackbarOpen(true);
+      } catch (error: any) {
+        console.error('Failed to mark notification as read:', error);
+        console.error('Notification ID:', notification._id);
+        console.error('Full notification object:', notification);
+        
+        // Show user-friendly error message
+        setSnackbarMessage('Có lỗi xảy ra khi đánh dấu thông báo: ' + error);
+        setSnackbarSeverity('error');
+        setSnackbarOpen(true);
+      }
     }
   };
 

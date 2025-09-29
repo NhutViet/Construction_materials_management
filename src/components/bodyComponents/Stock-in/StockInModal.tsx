@@ -148,8 +148,8 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
         materialId: selectedMaterial._id,
         materialName: selectedMaterial.name,
         quantity: itemQuantity,
-        unitPrice: selectedMaterial.price || 0,
-        totalPrice: (selectedMaterial.price || 0) * itemQuantity,
+        unitPrice: selectedMaterial.importCost || 0,
+        totalPrice: (selectedMaterial.importCost || 0) * itemQuantity,
         unit: selectedMaterial.unit || 'cái',
         supplier: formData.supplier
       };
