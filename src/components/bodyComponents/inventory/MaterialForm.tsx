@@ -29,6 +29,7 @@ interface FormData {
   name: string;
   category: string;
   price: number;
+  importCost: number;
   quantity: number;
   unit: string;
   supplier: string;
@@ -44,6 +45,7 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
     name: '',
     category: '',
     price: 0,
+    importCost: 0,
     quantity: 0,
     unit: '',
     supplier: '',
@@ -75,6 +77,7 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
         name: material.name || '',
         category: material.category || '',
         price: material.price || 0,
+        importCost: material.importCost || 0,
         quantity: material.quantity || 0,
         unit: material.unit || 'pcs',
         supplier: material.supplier || '',
@@ -102,7 +105,11 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
     }
 
     if (formData.price <= 0) {
-      newErrors.price = 'Giá phải lớn hơn 0';
+      newErrors.price = 'Giá bán phải lớn hơn 0';
+    }
+
+    if (formData.importCost <= 0) {
+      newErrors.importCost = 'Giá nhập phải lớn hơn 0';
     }
 
     if (formData.quantity < 0) {
@@ -252,10 +259,25 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
           </Typography>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={6}>
           <TextField
             fullWidth
-            label="Giá *"
+            label="Giá Nhập *"
+            type="number"
+            value={formData.importCost}
+            onChange={(e) => handleInputChange('importCost', parseFloat(e.target.value) || 0)}
+            error={!!errors.importCost}
+            helperText={errors.importCost}
+            InputProps={{
+              startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>
+            }}
+          />
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <TextField
+            fullWidth
+            label="Giá Bán *"
             type="number"
             value={formData.price}
             onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || 0)}
@@ -296,15 +318,7 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
           </FormControl>
         </Grid>
 
-
-        {/* Supplier and Status */}
-        <Grid item xs={12}>
-          <Typography variant="subtitle1" color="primary" gutterBottom sx={{ mt: 2 }}>
-            Thông Tin Khác
-          </Typography>
-        </Grid>
-
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={4}>
           <TextField
             fullWidth
             label="Nhà Cung Cấp *"
@@ -315,6 +329,15 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
             placeholder="Tên nhà cung cấp"
           />
         </Grid>
+
+
+        {/* Supplier and Status */}
+        <Grid item xs={12}>
+          <Typography variant="subtitle1" color="primary" gutterBottom sx={{ mt: 2 }}>
+            Thông Tin Khác
+          </Typography>
+        </Grid>
+
 
         <Grid item xs={12} md={6}>
           <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>

@@ -306,17 +306,25 @@ export const markAsRead = createAsyncThunk(
   'notifications/markAsRead',
   async (id: string, { rejectWithValue }) => {
     try {
+      console.log('markAsRead API call - ID:', id);
       const axiosInstance = AxiosInstance();
-      const response = await axiosInstance.patch(`/notifications/${id}/read`);
+      const url = `/notifications/${id}/read`;
+      console.log('markAsRead API call - URL:', url);
+      
+      const response = await axiosInstance.patch(url);
+      console.log('markAsRead API response:', response.data);
       
       // Backend returns { success, message, data } format
       const apiResponse = response.data as ApiResponse<Notification>;
       if (!apiResponse.success) {
+        console.error('markAsRead API - Backend returned success: false', apiResponse);
         return rejectWithValue(apiResponse.message || 'Failed to mark notification as read');
       }
       
       return apiResponse.data;
     } catch (error: any) {
+      console.error('markAsRead API error:', error);
+      console.error('markAsRead API error response:', error.response?.data);
       const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to mark notification as read';
       return rejectWithValue(errorMessage);
     }
