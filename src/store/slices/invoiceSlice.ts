@@ -13,6 +13,17 @@ export interface InvoiceItem {
   deliveredQuantity?: number;
   deliveryStatus?: 'pending' | 'partial' | 'delivered';
   deliveredAt?: string;
+  deliveredBy?: string;
+  
+  // Các trường theo dõi giá ban đầu và giá đã điều chỉnh
+  originalUnitPrice?: number;
+  originalTotalPrice?: number;
+  adjustedUnitPrice?: number;
+  adjustedTotalPrice?: number;
+  priceAdjustmentAmount?: number;
+  priceAdjustmentReason?: string;
+  priceAdjustedAt?: string;
+  priceAdjustedBy?: string;
 }
 
 export interface Invoice {
@@ -24,10 +35,12 @@ export interface Invoice {
   customerAddress?: string;
   items: InvoiceItem[];
   subtotal: number;
+  taxRate: number;
+  taxAmount: number;
   discountRate: number;
   discountAmount: number;
   totalAmount: number;
-  status: 'pending' | 'confirmed' | 'delivered' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
   paymentMethod: 'cash' | 'online' | 'debt';
   paymentStatus: 'unpaid' | 'partial' | 'paid';
   paidAmount: number;
@@ -40,6 +53,14 @@ export interface Invoice {
   isDeleted: boolean;
   createdAt: string;
   updatedAt: string;
+  
+  // Các trường theo dõi giá ban đầu và giá đã điều chỉnh cho toàn bộ hóa đơn
+  originalTotalAmount?: number;
+  adjustedTotalAmount?: number;
+  totalPriceAdjustmentAmount?: number;
+  priceAdjustmentReason?: string;
+  priceAdjustedAt?: string;
+  priceAdjustedBy?: string;
 }
 
 export interface CreateInvoiceDto {
@@ -50,6 +71,7 @@ export interface CreateInvoiceDto {
     materialId: string;
     quantity: number;
   }[];
+  taxRate?: number;
   discountRate?: number;
   paymentMethod: 'cash' | 'online' | 'debt';
   paymentStatus?: 'unpaid' | 'partial' | 'paid';
@@ -67,6 +89,7 @@ export interface UpdateInvoiceDto {
     materialId: string;
     quantity: number;
   }[];
+  taxRate?: number;
   discountRate?: number;
   paymentMethod?: 'cash' | 'online' | 'debt';
   paidAmount?: number;
@@ -76,7 +99,7 @@ export interface UpdateInvoiceDto {
 }
 
 export interface UpdateInvoiceStatusDto {
-  status: 'pending' | 'confirmed' | 'delivered' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
   notes?: string;
 }
 

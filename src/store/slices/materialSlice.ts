@@ -22,6 +22,45 @@ export interface Material {
   updatedAt: string;
 }
 
+// DTOs for creating and updating materials
+export interface CreateMaterialDto {
+  name: string;
+  category: string;
+  unit: string;
+  quantity: number;
+  price: number;
+  importCost: number;
+  description?: string;
+  supplier?: string;
+}
+
+export interface UpdateMaterialDto {
+  name?: string;
+  category?: string;
+  unit?: string;
+  quantity?: number;
+  price?: number;
+  importCost?: number;
+  description?: string;
+  supplier?: string;
+  priceUpdateReason?: string; // Lý do thay đổi giá
+  updateAffectedInvoices?: boolean; // Có cập nhật hóa đơn bị ảnh hưởng không (mặc định true)
+}
+
+// Response type for update operations that may affect invoices
+export interface MaterialUpdateResponse {
+  material: Material;
+  affectedInvoices: Array<{
+    invoiceId: string;
+    invoiceNumber: string;
+    customerName: string;
+    oldTotalAmount: number;
+    newTotalAmount: number;
+    priceDifference: number;
+    items: any[];
+  }>;
+}
+
 interface MaterialState {
   materials: Material[];
   isLoading: boolean;
@@ -35,6 +74,7 @@ interface MaterialState {
   };
   lowStockMaterials: Material[];
   lowStockThreshold: number;
+  lastUpdateResponse: MaterialUpdateResponse | null; // Store the last update response with affected invoices
 }
 
 const initialState: MaterialState = {
@@ -50,6 +90,7 @@ const initialState: MaterialState = {
   },
   lowStockMaterials: [],
   lowStockThreshold: 10,
+  lastUpdateResponse: null,
 };
 
 // Async thunks for API calls
@@ -82,7 +123,7 @@ export const fetchMaterialById = createAsyncThunk(
 
 export const createMaterial = createAsyncThunk(
   'materials/createMaterial',
-  async (materialData: Partial<Material>, { rejectWithValue }) => {
+  async (materialData: CreateMaterialDto, { rejectWithValue }) => {
     try {
       const axiosInstance = AxiosInstance();
       const response = await axiosInstance.post('/materials', materialData);
@@ -95,7 +136,7 @@ export const createMaterial = createAsyncThunk(
 
 export const updateMaterial = createAsyncThunk(
   'materials/updateMaterial',
-  async ({ id, materialData }: { id: string; materialData: Partial<Material> }, { rejectWithValue }) => {
+  async ({ id, materialData }: { id: string; materialData: UpdateMaterialDto }, { rejectWithValue }) => {
     try {
       const axiosInstance = AxiosInstance();
       const response = await axiosInstance.patch(`/materials/${id}`, materialData);
@@ -169,6 +210,9 @@ const materialSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    clearLastUpdateResponse: (state) => {
+      state.lastUpdateResponse = null;
+    },
     // Local filtering for search functionality
     filterMaterials: (state) => {
       // This will be handled by selectors in components
@@ -226,13 +270,24 @@ const materialSlice = createSlice({
       })
       .addCase(updateMaterial.fulfilled, (state, action) => {
         state.isLoading = false;
-        const material = action.payload as unknown as Material;
+        const payload = action.payload as unknown as Material | MaterialUpdateResponse;
+        
+        // Handle both response types: Material or MaterialUpdateResponse
+        const material = 'material' in payload ? payload.material : payload;
+        
         const index = state.materials.findIndex(m => m._id === material._id);
         if (index !== -1) {
           state.materials[index] = material;
         }
         if (state.selectedMaterial?._id === material._id) {
           state.selectedMaterial = material;
+        }
+        
+        // Store the full response if it contains affected invoices
+        if ('material' in payload) {
+          state.lastUpdateResponse = payload as MaterialUpdateResponse;
+        } else {
+          state.lastUpdateResponse = null;
         }
       })
       .addCase(updateMaterial.rejected, (state, action) => {
@@ -295,6 +350,7 @@ export const {
   clearFilters,
   setLowStockThreshold,
   clearError,
+  clearLastUpdateResponse,
   filterMaterials,
 } = materialSlice.actions;
 
@@ -308,6 +364,7 @@ export const selectMaterialsError = (state: { materials: MaterialState }) => sta
 export const selectMaterialsFilters = (state: { materials: MaterialState }) => state.materials.filters;
 export const selectLowStockMaterials = (state: { materials: MaterialState }) => state.materials.lowStockMaterials;
 export const selectLowStockThreshold = (state: { materials: MaterialState }) => state.materials.lowStockThreshold;
+export const selectLastUpdateResponse = (state: { materials: MaterialState }) => state.materials.lastUpdateResponse;
 
 // Computed selectors
 export const selectFilteredMaterials = (state: { materials: MaterialState }) => {
