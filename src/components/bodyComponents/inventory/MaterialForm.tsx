@@ -17,7 +17,7 @@ import {
 } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../../store';
-import { createMaterial, updateMaterial, clearError } from '../../../store/slices/materialSlice';
+import { createMaterial, updateMaterial, clearError, CreateMaterialDto, UpdateMaterialDto } from '../../../store/slices/materialSlice';
 
 interface MaterialFormProps {
   material?: any; // Material object for editing, undefined for creating new
@@ -35,6 +35,9 @@ interface FormData {
   supplier: string;
   description: string;
   isActive: boolean;
+  // Additional fields for price updates
+  priceUpdateReason?: string;
+  updateAffectedInvoices?: boolean;
 }
 
 const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSuccess }) => {
@@ -51,6 +54,8 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
     supplier: '',
     description: '',
     isActive: true,
+    priceUpdateReason: '',
+    updateAffectedInvoices: true,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -83,6 +88,8 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
         supplier: material.supplier || '',
         description: material.description || '',
         isActive: material.isActive !== undefined ? material.isActive : true,
+        priceUpdateReason: '',
+        updateAffectedInvoices: true,
       });
     }
   }, [material]);
@@ -153,14 +160,41 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
 
     try {
       if (material) {
-        // Update existing material
+        // Update existing material - only send changed fields
+        const updateData: UpdateMaterialDto = {};
+        
+        // Check which fields have changed
+        if (formData.name !== material.name) updateData.name = formData.name;
+        if (formData.category !== material.category) updateData.category = formData.category;
+        if (formData.price !== material.price) {
+          updateData.price = formData.price;
+          updateData.priceUpdateReason = formData.priceUpdateReason || 'Cập nhật giá từ hệ thống';
+          updateData.updateAffectedInvoices = formData.updateAffectedInvoices;
+        }
+        if (formData.importCost !== material.importCost) updateData.importCost = formData.importCost;
+        if (formData.quantity !== material.quantity) updateData.quantity = formData.quantity;
+        if (formData.unit !== material.unit) updateData.unit = formData.unit;
+        if (formData.supplier !== material.supplier) updateData.supplier = formData.supplier;
+        if (formData.description !== material.description) updateData.description = formData.description;
+
         await dispatch(updateMaterial({
           id: material._id,
-          materialData: formData
+          materialData: updateData
         })).unwrap();
       } else {
-        // Create new material
-        await dispatch(createMaterial(formData)).unwrap();
+        // Create new material - send only required fields
+        const createData: CreateMaterialDto = {
+          name: formData.name,
+          category: formData.category,
+          price: formData.price,
+          importCost: formData.importCost,
+          quantity: formData.quantity,
+          unit: formData.unit,
+          supplier: formData.supplier,
+          description: formData.description,
+        };
+
+        await dispatch(createMaterial(createData)).unwrap();
       }
 
       onSuccess?.();
@@ -269,7 +303,7 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
             error={!!errors.importCost}
             helperText={errors.importCost}
             InputProps={{
-              startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>
+              startAdornment: <Typography sx={{ mr: 1 }}>VND</Typography>
             }}
           />
         </Grid>
@@ -284,7 +318,7 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
             error={!!errors.price}
             helperText={errors.price}
             InputProps={{
-              startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>
+              startAdornment: <Typography sx={{ mr: 1 }}>VND</Typography>
             }}
           />
         </Grid>
@@ -353,6 +387,43 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ material, onClose, onSucces
             />
           </Box>
         </Grid>
+
+        {/* Price Update Fields - Only show when editing and price is being changed */}
+        {material && (
+          <>
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" color="primary" gutterBottom sx={{ mt: 2 }}>
+                Thông Tin Cập Nhật Giá
+              </Typography>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Lý do thay đổi giá"
+                value={formData.priceUpdateReason}
+                onChange={(e) => handleInputChange('priceUpdateReason', e.target.value)}
+                placeholder="Nhập lý do thay đổi giá (tùy chọn)"
+                helperText="Chỉ hiển thị khi bạn thay đổi giá bán"
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={formData.updateAffectedInvoices}
+                      onChange={(e) => handleInputChange('updateAffectedInvoices', e.target.checked)}
+                      color="primary"
+                    />
+                  }
+                  label="Cập nhật hóa đơn bị ảnh hưởng"
+                />
+              </Box>
+            </Grid>
+          </>
+        )}
       </Grid>
 
       {/* Action Buttons */}

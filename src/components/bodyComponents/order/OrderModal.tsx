@@ -811,14 +811,32 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
           fontWeight: 600,
           color: "primary.main"
         }}>
-          {item.unitPrice?.toLocaleString() + ' VNĐ' || '0'}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              {item.unitPrice?.toLocaleString() + ' VNĐ' || '0'}
+            </Typography>
+            {item.originalUnitPrice && item.originalUnitPrice !== item.unitPrice && (
+              <Typography variant="caption" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
+                {item.originalUnitPrice.toLocaleString()} VNĐ
+              </Typography>
+            )}
+          </Box>
         </TableCell>
         <TableCell sx={{ 
           fontSize: { xs: "0.75rem", sm: "0.875rem" },
           fontWeight: 600,
           color: "success.main"
         }}>
-          {item.totalPrice?.toLocaleString() + ' VNĐ' || '0'}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              {item.totalPrice?.toLocaleString() + ' VNĐ' || '0'}
+            </Typography>
+            {item.originalTotalPrice && item.originalTotalPrice !== item.totalPrice && (
+              <Typography variant="caption" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
+                {item.originalTotalPrice.toLocaleString()} VNĐ
+              </Typography>
+            )}
+          </Box>
         </TableCell>
         <TableCell sx={{ 
           fontSize: { xs: "0.75rem", sm: "0.875rem" },
@@ -980,7 +998,7 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
         </Box>
         <Box sx={{ 
           display: "grid", 
-          gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "1fr 1fr 1fr", lg: "1fr 1fr 1fr 1fr 1fr" },
+          gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "1fr 1fr 1fr", lg: "1fr 1fr 1fr 1fr 1fr 1fr" },
           gap: { xs: 1, sm: 2 },
           m: { xs: 1, sm: 2, md: 3 },
           mb: { xs: 2, sm: 3 }
@@ -1106,9 +1124,16 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
             <Typography variant="subtitle2" sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" }, fontWeight: 600, mb: { xs: 0.5, sm: 0 } }}>
               Tổng tiền
             </Typography>
-            <Typography variant="body2" color="primary.main" sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" }, fontWeight: 600, textAlign: { xs: "left", sm: "right" } }}>
-              {currentOrder.totalAmount?.toLocaleString() + ' VNĐ' || '0'}
-            </Typography>
+            <Box sx={{ textAlign: { xs: "left", sm: "right" } }}>
+              <Typography variant="body2" color="primary.main" sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" }, fontWeight: 600 }}>
+                {currentOrder.totalAmount?.toLocaleString() + ' VNĐ' || '0'}
+              </Typography>
+              {currentOrder.originalTotalAmount && currentOrder.originalTotalAmount !== currentOrder.totalAmount && (
+                <Typography variant="caption" color="text.secondary" sx={{ textDecoration: 'line-through', display: 'block' }}>
+                  {currentOrder.originalTotalAmount.toLocaleString()} VNĐ
+                </Typography>
+              )}
+            </Box>
           </Paper>
           
           <Paper
@@ -1173,6 +1198,42 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
               {totalDeliveredAmount.toLocaleString() + ' VNĐ'}
             </Typography>
           </Paper>
+          
+          {/* Price Adjustment Information */}
+          {currentOrder.totalPriceAdjustmentAmount && currentOrder.totalPriceAdjustmentAmount !== 0 && (
+            <Paper
+              elevation={0}
+              sx={{
+                display: "flex",
+                flexDirection: { xs: "column", sm: "row" },
+                justifyContent: "space-between",
+                alignItems: { xs: "flex-start", sm: "center" },
+                p: { xs: 1.5, sm: 2 },
+                bgcolor: "warning.50",
+                borderRadius: 1,
+                minHeight: { xs: "auto", sm: "60px" }
+              }}
+            >
+              <Typography variant="subtitle2" sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" }, fontWeight: 600, mb: { xs: 0.5, sm: 0 } }}>
+                Điều chỉnh giá
+              </Typography>
+              <Box sx={{ textAlign: { xs: "left", sm: "right" } }}>
+                <Typography variant="body2" color="warning.main" sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" }, fontWeight: 600 }}>
+                  {currentOrder.totalPriceAdjustmentAmount > 0 ? '+' : ''}{currentOrder.totalPriceAdjustmentAmount.toLocaleString()} VNĐ
+                </Typography>
+                {currentOrder.priceAdjustmentReason && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                    Lý do: {currentOrder.priceAdjustmentReason}
+                  </Typography>
+                )}
+                {currentOrder.priceAdjustedAt && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                    Ngày: {new Date(currentOrder.priceAdjustedAt).toLocaleDateString('vi-VN')}
+                  </Typography>
+                )}
+              </Box>
+            </Paper>
+          )}
         </Box>
         <Box sx={{ flex: 1, overflow: "hidden" }}>
           <TableContainer 
