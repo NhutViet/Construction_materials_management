@@ -19,6 +19,8 @@ import Order from "./components/bodyComponents/order/Order";
 import Profile from "./components/bodyComponents/profile/Profile";
 import Login from "./components/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
+import PublicInvoiceSearch from "./components/PublicInvoiceSearch";
+import HomePage from "./components/HomePage";
 import { StockInAnalytics } from "./components/bodyComponents/analytics";
 
 const App: React.FC = () => {
@@ -51,8 +53,9 @@ const App: React.FC = () => {
   const router = createBrowserRouter(
     createRoutesFromElements(
       <>
-        <Route path="/" element={<Login />} />
+        <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/search-invoice" element={<PublicInvoiceSearch />} />
         <Route 
           path="/dashboard" 
           element={

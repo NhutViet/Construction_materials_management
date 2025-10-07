@@ -8,6 +8,7 @@ import {
   Container,
   Alert,
   CircularProgress,
+  Link,
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -162,6 +163,26 @@ const Login: React.FC = () => {
           <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
             Vui lòng nhập thông tin đăng nhập của bạn
           </Typography>
+          
+          <Box sx={{ mt: 3, textAlign: 'center' }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              Hoặc
+            </Typography>
+            <Link 
+              href="/search-invoice" 
+              variant="body2" 
+              sx={{ 
+                textDecoration: 'none',
+                fontWeight: 'bold',
+                color: 'primary.main',
+                '&:hover': {
+                  textDecoration: 'underline'
+                }
+              }}
+            >
+              Tra cứu hóa đơn công khai
+            </Link>
+          </Box>
         </Paper>
       </Box>
     </Container>
