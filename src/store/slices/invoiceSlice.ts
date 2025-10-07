@@ -185,6 +185,12 @@ export interface InvoiceQueryDto {
   limit?: number;
 }
 
+export interface PublicInvoiceSearchDto {
+  customerPhone?: string;
+  invoiceNumber?: string;
+  customerName?: string;
+}
+
 export interface InvoiceStatistics {
   totalInvoices: number;
   totalRevenue: number;
@@ -221,6 +227,8 @@ export interface InvoiceState {
   deliveryStatus: DeliveryStatus | null;
   deliveredAmount: DeliveredAmount | null;
   deliveredAmountLoading: boolean;
+  publicSearchResults: Invoice[]; // Store public search results
+  publicSearchLoading: boolean;
   pagination: {
     page: number;
     limit: number;
@@ -243,6 +251,8 @@ const initialState: InvoiceState = {
   deliveryStatus: null,
   deliveredAmount: null,
   deliveredAmountLoading: false,
+  publicSearchResults: [],
+  publicSearchLoading: false,
   pagination: {
     page: 1,
     limit: 10,
@@ -543,6 +553,18 @@ export const fetchDeliveredAmount = createAsyncThunk(
   }
 );
 
+export const searchPublicInvoices = createAsyncThunk(
+  'invoice/searchPublicInvoices',
+  async (searchData: PublicInvoiceSearchDto, { rejectWithValue }) => {
+    try {
+      const response = await AxiosInstance("", "application/json", true).get('/invoices/public/search', { params: searchData });
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to search public invoices');
+    }
+  }
+);
+
 const invoiceSlice = createSlice({
   name: 'invoice',
   initialState,
@@ -590,6 +612,9 @@ const invoiceSlice = createSlice({
     },
     clearDeliveredAmount: (state) => {
       state.deliveredAmount = null;
+    },
+    clearPublicSearchResults: (state) => {
+      state.publicSearchResults = [];
     },
   },
   extraReducers: (builder) => {
@@ -1051,6 +1076,21 @@ const invoiceSlice = createSlice({
         state.deliveredAmountLoading = false;
         state.error = action.payload as string;
       });
+
+    // Search public invoices
+    builder
+      .addCase(searchPublicInvoices.pending, (state) => {
+        state.publicSearchLoading = true;
+        state.error = null;
+      })
+      .addCase(searchPublicInvoices.fulfilled, (state, action: PayloadAction<Invoice[]>) => {
+        state.publicSearchLoading = false;
+        state.publicSearchResults = action.payload;
+      })
+      .addCase(searchPublicInvoices.rejected, (state, action) => {
+        state.publicSearchLoading = false;
+        state.error = action.payload as string;
+      });
   },
 });
 
@@ -1066,6 +1106,7 @@ export const {
   clearDeliveryStatus,
   setDeliveredAmount,
   clearDeliveredAmount,
+  clearPublicSearchResults,
 } = invoiceSlice.actions;
 
 export default invoiceSlice.reducer;
@@ -1082,6 +1123,8 @@ export const selectInvoiceStatistics = (state: { invoice: InvoiceState }) => sta
 export const selectPaymentMethods = (state: { invoice: InvoiceState }) => state.invoice.paymentMethods;
 export const selectDeliveryStatus = (state: { invoice: InvoiceState }) => state.invoice.deliveryStatus;
 export const selectDeliveredAmount = (state: { invoice: InvoiceState }) => state.invoice.deliveredAmount;
+export const selectPublicSearchResults = (state: { invoice: InvoiceState }) => state.invoice.publicSearchResults;
+export const selectPublicSearchLoading = (state: { invoice: InvoiceState }) => state.invoice.publicSearchLoading;
 
 // Client-side filtering selector
 export const selectFilteredInvoices = (state: { invoice: InvoiceState }) => {

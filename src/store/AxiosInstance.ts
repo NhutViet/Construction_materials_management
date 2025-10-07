@@ -1,13 +1,20 @@
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 
-const AxiosInstance = (token = "", contentType = "application/json") => {
+const AxiosInstance = (token = "", contentType = "application/json", isPublic = false) => {
   const axiosInstance = axios.create({
-    baseURL: "http://192.168.1.7:3000/",
+    baseURL: "http://10.12.10.216:3000/",
   });
 
   // Request interceptor
   axiosInstance.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
+      // For public API calls, skip authentication
+      if (isPublic) {
+        config.headers.set('Accept', 'application/json');
+        config.headers.set('Content-Type', contentType);
+        return config;
+      }
+
       // Try to get token from localStorage if not provided
       let authToken = token;
       if (!authToken) {
@@ -48,11 +55,12 @@ const AxiosInstance = (token = "", contentType = "application/json") => {
         switch (err.response.status) {
           case 401:
             console.error("Unauthorized - Token may be expired");
-            // Clear localStorage and redirect to login
-            localStorage.removeItem('user');
-            localStorage.removeItem('accessToken');
-            // You can dispatch logout action here if you have access to store
-            window.location.href = '/login';
+            // Only redirect to login for authenticated requests
+            if (!isPublic) {
+              localStorage.removeItem('user');
+              localStorage.removeItem('accessToken');
+              window.location.href = '/login';
+            }
             break;
           case 403:
             console.error("Forbidden - Insufficient permissions");
