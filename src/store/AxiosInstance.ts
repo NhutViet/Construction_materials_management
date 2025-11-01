@@ -2,7 +2,7 @@ import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from "ax
 
 const AxiosInstance = (token = "", contentType = "application/json", isPublic = false) => {
   const axiosInstance = axios.create({
-    baseURL: "http://10.12.10.216:3000/",
+    baseURL: "http://localhost:3000/",
   });
 
   // Request interceptor
