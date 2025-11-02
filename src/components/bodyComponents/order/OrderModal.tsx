@@ -1418,23 +1418,25 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
               <Box sx={{ display: { xs: "none", sm: "inline" } }}>Đã giao</Box>
               <Box sx={{ display: { xs: "inline", sm: "none" } }}>Giao</Box>
             </Button>
-            <Button
-              variant="contained"
-              size="small"
-              sx={{ 
-                bgcolor: "#f44336", 
-                px: { xs: 2, sm: 3 },
-                py: { xs: 1, sm: 1.5 },
-                minWidth: { xs: 80, sm: 120 },
-                fontSize: { xs: "0.75rem", sm: "0.875rem" },
-                "&:hover": { bgcolor: "#d32f2f" }
-              }}
-              onClick={() => handleStatusChange('cancelled')}
-              disabled={currentOrder.status === 'cancelled' || currentOrder.status === 'delivered'}
-            >
-              <Box sx={{ display: { xs: "none", sm: "inline" } }}>Hủy đơn</Box>
-              <Box sx={{ display: { xs: "inline", sm: "none" } }}>Hủy</Box>
-            </Button>
+            {currentOrder.paymentStatus !== 'paid' && (
+              <Button
+                variant="contained"
+                size="small"
+                sx={{ 
+                  bgcolor: "#f44336", 
+                  px: { xs: 2, sm: 3 },
+                  py: { xs: 1, sm: 1.5 },
+                  minWidth: { xs: 80, sm: 120 },
+                  fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                  "&:hover": { bgcolor: "#d32f2f" }
+                }}
+                onClick={() => handleStatusChange('cancelled')}
+                disabled={currentOrder.status === 'cancelled' || currentOrder.status === 'delivered'}
+              >
+                <Box sx={{ display: { xs: "none", sm: "inline" } }}>Hủy đơn</Box>
+                <Box sx={{ display: { xs: "inline", sm: "none" } }}>Hủy</Box>
+              </Button>
+            )}
           </Paper>
         </Box>
       </Box>
