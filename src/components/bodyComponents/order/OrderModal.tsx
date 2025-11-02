@@ -972,26 +972,28 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
                   <Box sx={{ display: { xs: "none", sm: "inline" } }}>VietQR</Box>
                   <Box sx={{ display: { xs: "inline", sm: "none" } }}>QR</Box>
                 </Button>
-                <Button
-                  variant="outlined"
-                  startIcon={<Edit />}
-                  onClick={handleEditInvoice}
-                  size="small"
-                  sx={{ 
-                    color: "primary.main",
-                    borderColor: "primary.main",
-                    fontSize: { xs: "0.75rem", sm: "0.875rem" },
-                    px: { xs: 1, sm: 2 },
-                    py: { xs: 0.5, sm: 1 },
-                    "&:hover": {
-                      backgroundColor: "primary.light",
-                      color: "white"
-                    }
-                  }}
-                >
-                  <Box sx={{ display: { xs: "none", sm: "inline" } }}>Chỉnh sửa</Box>
-                  <Box sx={{ display: { xs: "inline", sm: "none" } }}>Sửa</Box>
-                </Button>
+                {currentOrder.status !== 'delivered' && (
+                  <Button
+                    variant="outlined"
+                    startIcon={<Edit />}
+                    onClick={handleEditInvoice}
+                    size="small"
+                    sx={{ 
+                      color: "primary.main",
+                      borderColor: "primary.main",
+                      fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                      px: { xs: 1, sm: 2 },
+                      py: { xs: 0.5, sm: 1 },
+                      "&:hover": {
+                        backgroundColor: "primary.light",
+                        color: "white"
+                      }
+                    }}
+                  >
+                    <Box sx={{ display: { xs: "none", sm: "inline" } }}>Chỉnh sửa</Box>
+                    <Box sx={{ display: { xs: "inline", sm: "none" } }}>Sửa</Box>
+                  </Button>
+                )}
               </>
             )}
           </Box>

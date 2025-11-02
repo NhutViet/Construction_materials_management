@@ -35,7 +35,7 @@ import {
 } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../../store';
-import { updateInvoice, clearError } from '../../../store/slices/invoiceSlice';
+import { updateInvoice, clearError, updateItemDelivery, fetchInvoiceById } from '../../../store/slices/invoiceSlice';
 import { fetchMaterials } from '../../../store/slices/materialSlice';
 import { UpdateInvoiceDto, InvoiceItem, Invoice } from '../../../store/slices/invoiceSlice';
 import { checkLowStockAndNotify, sendInvoiceUpdateNotification } from '../../../utils/notificationUtils';
@@ -58,6 +58,8 @@ interface FormData {
     unitPrice: number;
     totalPrice: number;
     unit: string;
+    deliveredQuantity?: number;
+    deliveryStatus?: 'pending' | 'partial' | 'delivered';
   }[];
   discountRate: number;
   paymentMethod: 'cash' | 'online' | 'debt';
@@ -111,7 +113,9 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           totalPrice: item.totalPrice,
-          unit: item.unit
+          unit: item.unit,
+          deliveredQuantity: item.deliveredQuantity || 0,
+          deliveryStatus: item.deliveryStatus || 'pending'
         })),
         discountRate: Number(invoice.discountRate) || 0,
         paymentMethod: invoice.paymentMethod || 'cash',
@@ -249,7 +253,9 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
       quantity: itemQuantity,
       unitPrice: selectedMaterial.price,
       totalPrice: selectedMaterial.price * itemQuantity,
-      unit: selectedMaterial.unit
+      unit: selectedMaterial.unit,
+      deliveredQuantity: 0,
+      deliveryStatus: 'pending' as const
     };
 
     if (existingItemIndex >= 0) {
@@ -258,6 +264,8 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
       updatedItems[existingItemIndex].quantity += itemQuantity;
       updatedItems[existingItemIndex].totalPrice = 
         updatedItems[existingItemIndex].quantity * updatedItems[existingItemIndex].unitPrice;
+      // Preserve deliveredQuantity when adding quantity to existing item
+      // deliveredQuantity remains the same, only quantity increases
       setFormData(prev => ({ ...prev, items: updatedItems }));
     } else {
       // Add new item
@@ -306,6 +314,20 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
       }
     }
 
+    // If new quantity is less than current deliveredQuantity, adjust deliveredQuantity
+    const currentDeliveredQuantity = item.deliveredQuantity || 0;
+    if (newQuantity < currentDeliveredQuantity) {
+      // Adjust deliveredQuantity to match new quantity (can't deliver more than ordered)
+      updatedItems[index].deliveredQuantity = newQuantity;
+      // Update delivery status: if new quantity equals adjusted deliveredQuantity, it's fully delivered
+      if (newQuantity === 0) {
+        updatedItems[index].deliveryStatus = 'pending';
+      } else {
+        // Since deliveredQuantity is now equal to quantity, status is delivered
+        updatedItems[index].deliveryStatus = 'delivered';
+      }
+    }
+
     updatedItems[index].quantity = newQuantity;
     updatedItems[index].totalPrice = updatedItems[index].unitPrice * newQuantity;
     setFormData(prev => ({ ...prev, items: updatedItems }));
@@ -343,6 +365,15 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
     if (!invoice) return;
 
     try {
+      // Store deliveredQuantity mapping before update to restore it later
+      // Map by materialId to match items after update
+      const deliveredQuantityMap = new Map<string, number>();
+      formData.items.forEach((item, index) => {
+        if (item.deliveredQuantity && item.deliveredQuantity > 0) {
+          deliveredQuantityMap.set(item.materialId, item.deliveredQuantity);
+        }
+      });
+
       const updateData: UpdateInvoiceDto = {
         customerName: formData.customerName,
         customerPhone: formData.customerPhone,
@@ -361,6 +392,52 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
         id: invoice._id,
         data: updateData
       })).unwrap();
+
+      // Restore deliveredQuantity for items that had it before update
+      // Match items by materialId since indices might have changed
+      if (deliveredQuantityMap.size > 0) {
+        const restorePromises: Promise<any>[] = [];
+        
+        updatedInvoice.items.forEach((updatedItem: InvoiceItem, itemIndex: number) => {
+          const preservedDeliveredQuantity = deliveredQuantityMap.get(updatedItem.materialId);
+          
+          if (preservedDeliveredQuantity !== undefined) {
+            // Ensure deliveredQuantity doesn't exceed new quantity
+            const finalDeliveredQuantity = Math.min(
+              preservedDeliveredQuantity, 
+              updatedItem.quantity
+            );
+            
+            if (finalDeliveredQuantity > 0) {
+              restorePromises.push(
+                dispatch(updateItemDelivery({
+                  id: invoice._id,
+                  itemIndex,
+                  data: {
+                    deliveredQuantity: finalDeliveredQuantity,
+                    notes: `Khôi phục số lượng đã giao sau khi cập nhật hóa đơn: ${finalDeliveredQuantity}/${updatedItem.quantity}`
+                  }
+                })).unwrap()
+              );
+            }
+          }
+        });
+
+        // Wait for all delivery quantities to be restored
+        if (restorePromises.length > 0) {
+          try {
+            await Promise.all(restorePromises);
+            console.log('Đã khôi phục số lượng đã giao cho các items');
+            // Refresh invoice to get updated data with restored deliveredQuantity
+            await dispatch(fetchInvoiceById(invoice._id)).unwrap();
+          } catch (restoreError) {
+            console.warn('Một số số lượng đã giao không thể khôi phục:', restoreError);
+          }
+        }
+      } else {
+        // If no deliveredQuantity to restore, still refresh invoice to get latest data
+        await dispatch(fetchInvoiceById(invoice._id)).unwrap();
+      }
 
       // Fetch updated materials after invoice update (inventory was updated)
       await dispatch(fetchMaterials());
