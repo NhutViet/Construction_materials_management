@@ -152,12 +152,12 @@ const initialState: StockInState = {
   error: null,
   filters: {
     page: 1,
-    limit: 10,
+    limit: 15,
   },
   statistics: null,
   pagination: {
     page: 1,
-    limit: 10,
+    limit: 15,
     total: 0,
   },
 };
@@ -299,7 +299,7 @@ const stockInSlice = createSlice({
     clearFilters: (state) => {
       state.filters = {
         page: 1,
-        limit: 10,
+        limit: 15,
         // Keep pagination settings but clear filter values
         search: undefined,
         status: undefined,
