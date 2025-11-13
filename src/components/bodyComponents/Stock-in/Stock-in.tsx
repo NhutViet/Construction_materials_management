@@ -12,6 +12,10 @@ import {
   selectFilteredStockIns,
   selectStockInStatistics,
   selectStockInsStats,
+  selectStockInsPagination,
+  selectStockInsFilters,
+  setPage,
+  setLimit,
   deleteStockIn,
   updateStockInStatus,
   updatePaymentStatus
@@ -22,10 +26,12 @@ import StockInModal from "./StockInModal";
 
 export default function StockIn() {
   const dispatch = useDispatch<AppDispatch>();
-  const stockIns = useSelector(selectFilteredStockIns);
+  const stockIns = useSelector(selectStockIns); // Use server-side paginated data
   const isLoading = useSelector(selectStockInsLoading);
   const error = useSelector(selectStockInsError);
   const statistics = useSelector(selectStockInStatistics);
+  const pagination = useSelector(selectStockInsPagination);
+  const filters = useSelector(selectStockInsFilters);
   
   const [editingStockIn, setEditingStockIn] = useState<any>(null);
   const [successMessage, setSuccessMessage] = useState<string>('');
@@ -41,25 +47,30 @@ export default function StockIn() {
   const [bulkAction, setBulkAction] = useState<'status' | 'payment' | 'delete'>('status');
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize, setPageSize] = useState(15);
+  const [isExporting, setIsExporting] = useState(false);
 
-  // Calculate paginated data
-  const startIndex = currentPage * pageSize;
-  const endIndex = startIndex + pageSize;
-  const paginatedStockIns = stockIns.slice(startIndex, endIndex);
-  const totalItems = stockIns.length;
-  const totalPages = Math.ceil(totalItems / pageSize);
+  // Use server-side pagination
+  const currentPage = (pagination.page || 1) - 1; // Convert 1-based to 0-based for TablePagination
+  const pageSize = pagination.limit || 15;
+  const totalItems = pagination.total || 0;
+  const paginatedStockIns = stockIns; // Data already paginated from server
 
+  // Initial load and when filters change
   useEffect(() => {
-    dispatch(fetchStockIns({ page: 1, limit: 1000 }));
+    const fetchParams = {
+      page: filters.page || 1,
+      limit: filters.limit || 15,
+      ...(filters.search && { search: filters.search }),
+      ...(filters.status && { status: filters.status }),
+      ...(filters.paymentStatus && { paymentStatus: filters.paymentStatus }),
+      ...(filters.supplier && { supplier: filters.supplier }),
+      ...(filters.startDate && { startDate: filters.startDate }),
+      ...(filters.endDate && { endDate: filters.endDate }),
+    };
+    
+    dispatch(fetchStockIns(fetchParams));
     dispatch(fetchStockInStatistics({}));
-  }, [dispatch]);
-
-  // Reset to first page when data changes
-  useEffect(() => {
-    setCurrentPage(0);
-  }, [stockIns]);
+  }, [dispatch, filters.page, filters.limit, filters.search, filters.status, filters.paymentStatus, filters.supplier, filters.startDate, filters.endDate]);
 
   const handleEditStockIn = (stockIn: any) => {
     setEditingStockIn(stockIn);
@@ -70,7 +81,17 @@ export default function StockIn() {
   };
 
   const handleStockInSuccess = () => {
-    dispatch(fetchStockIns({ page: 1, limit: 1000 }));
+    const fetchParams = {
+      page: filters.page || 1,
+      limit: filters.limit || 15,
+      ...(filters.search && { search: filters.search }),
+      ...(filters.status && { status: filters.status }),
+      ...(filters.paymentStatus && { paymentStatus: filters.paymentStatus }),
+      ...(filters.supplier && { supplier: filters.supplier }),
+      ...(filters.startDate && { startDate: filters.startDate }),
+      ...(filters.endDate && { endDate: filters.endDate }),
+    };
+    dispatch(fetchStockIns(fetchParams));
     dispatch(fetchStockInStatistics({}));
     setSuccessMessage('Cập nhật phiếu nhập kho thành công!');
   };
@@ -80,7 +101,19 @@ export default function StockIn() {
   };
 
   const handleCreateSuccess = () => {
-    dispatch(fetchStockIns({ page: 1, limit: 1000 }));
+    // Reset to first page after creating
+    dispatch(setPage(1));
+    const fetchParams = {
+      page: 1,
+      limit: filters.limit || 15,
+      ...(filters.search && { search: filters.search }),
+      ...(filters.status && { status: filters.status }),
+      ...(filters.paymentStatus && { paymentStatus: filters.paymentStatus }),
+      ...(filters.supplier && { supplier: filters.supplier }),
+      ...(filters.startDate && { startDate: filters.startDate }),
+      ...(filters.endDate && { endDate: filters.endDate }),
+    };
+    dispatch(fetchStockIns(fetchParams));
     dispatch(fetchStockInStatistics({}));
     setSuccessMessage('Tạo phiếu nhập kho thành công!');
   };
@@ -97,6 +130,19 @@ export default function StockIn() {
         setSuccessMessage('Xóa phiếu nhập kho thành công!');
         setDeleteDialogOpen(false);
         setStockInToDelete(null);
+        
+        // Reload current page data
+        const fetchParams = {
+          page: filters.page || 1,
+          limit: filters.limit || 15,
+          ...(filters.search && { search: filters.search }),
+          ...(filters.status && { status: filters.status }),
+          ...(filters.paymentStatus && { paymentStatus: filters.paymentStatus }),
+          ...(filters.supplier && { supplier: filters.supplier }),
+          ...(filters.startDate && { startDate: filters.startDate }),
+          ...(filters.endDate && { endDate: filters.endDate }),
+        };
+        dispatch(fetchStockIns(fetchParams));
         dispatch(fetchStockInStatistics({}));
       } catch (error) {
         console.error('Error deleting stock-in:', error);
@@ -128,6 +174,19 @@ export default function StockIn() {
         setSuccessMessage('Cập nhật trạng thái thành công!');
         setStatusDialogOpen(false);
         setSelectedStockIn(null);
+        
+        // Reload current page data
+        const fetchParams = {
+          page: filters.page || 1,
+          limit: filters.limit || 15,
+          ...(filters.search && { search: filters.search }),
+          ...(filters.status && { status: filters.status }),
+          ...(filters.paymentStatus && { paymentStatus: filters.paymentStatus }),
+          ...(filters.supplier && { supplier: filters.supplier }),
+          ...(filters.startDate && { startDate: filters.startDate }),
+          ...(filters.endDate && { endDate: filters.endDate }),
+        };
+        dispatch(fetchStockIns(fetchParams));
         dispatch(fetchStockInStatistics({}));
       } catch (error) {
         console.error('Error updating status:', error);
@@ -179,6 +238,19 @@ export default function StockIn() {
         setPaymentDialogOpen(false);
         setSelectedStockIn(null);
         setPaymentAmount(0);
+        
+        // Reload current page data
+        const fetchParams = {
+          page: filters.page || 1,
+          limit: filters.limit || 15,
+          ...(filters.search && { search: filters.search }),
+          ...(filters.status && { status: filters.status }),
+          ...(filters.paymentStatus && { paymentStatus: filters.paymentStatus }),
+          ...(filters.supplier && { supplier: filters.supplier }),
+          ...(filters.startDate && { startDate: filters.startDate }),
+          ...(filters.endDate && { endDate: filters.endDate }),
+        };
+        dispatch(fetchStockIns(fetchParams));
         dispatch(fetchStockInStatistics({}));
       } catch (error) {
         console.error('Error updating payment status:', error);
@@ -191,9 +263,25 @@ export default function StockIn() {
     setExportDialogOpen(true);
   };
 
-  const handleExportConfirm = () => {
-    // Export all data, not just current page
-    const dataToExport = stockIns.map(stockIn => ({
+  const handleExportConfirm = async () => {
+    setIsExporting(true);
+    try {
+      // Fetch all data for export (without pagination)
+      const allDataResponse = await dispatch(fetchStockIns({ 
+        limit: 10000, // Large limit to get all data
+        page: 1,
+        ...(filters.search && { search: filters.search }),
+        ...(filters.status && { status: filters.status }),
+        ...(filters.paymentStatus && { paymentStatus: filters.paymentStatus }),
+        ...(filters.supplier && { supplier: filters.supplier }),
+        ...(filters.startDate && { startDate: filters.startDate }),
+        ...(filters.endDate && { endDate: filters.endDate }),
+      })).unwrap();
+      
+      const allData = allDataResponse.data || [];
+      
+      // Export all data, not just current page
+      const dataToExport = allData.map((stockIn: any) => ({
       'Số phiếu nhập': stockIn.stockInNumber,
       'Nhà cung cấp': stockIn.supplier,
       'Số lượng mặt hàng': stockIn.items?.length || 0,
@@ -212,8 +300,27 @@ export default function StockIn() {
       exportToPDF(dataToExport, 'stock-in-report.pdf');
     }
     
+    // Reload current page data after export
+    const fetchParams = {
+      page: filters.page || 1,
+      limit: filters.limit || 15,
+      ...(filters.search && { search: filters.search }),
+      ...(filters.status && { status: filters.status }),
+      ...(filters.paymentStatus && { paymentStatus: filters.paymentStatus }),
+      ...(filters.supplier && { supplier: filters.supplier }),
+      ...(filters.startDate && { startDate: filters.startDate }),
+      ...(filters.endDate && { endDate: filters.endDate }),
+    };
+    dispatch(fetchStockIns(fetchParams));
+    
     setExportDialogOpen(false);
+    setIsExporting(false);
     setSuccessMessage('Xuất báo cáo thành công!');
+  } catch (error) {
+    console.error('Error exporting data:', error);
+    setSuccessMessage('Lỗi khi xuất báo cáo!');
+    setIsExporting(false);
+  }
   };
 
   const exportToCSV = (data: any[], filename: string) => {
@@ -381,6 +488,19 @@ export default function StockIn() {
       
       setSelectedItems([]);
       setBulkActionDialogOpen(false);
+      
+      // Reload current page data
+      const fetchParams = {
+        page: filters.page || 1,
+        limit: filters.limit || 15,
+        ...(filters.search && { search: filters.search }),
+        ...(filters.status && { status: filters.status }),
+        ...(filters.paymentStatus && { paymentStatus: filters.paymentStatus }),
+        ...(filters.supplier && { supplier: filters.supplier }),
+        ...(filters.startDate && { startDate: filters.startDate }),
+        ...(filters.endDate && { endDate: filters.endDate }),
+      };
+      dispatch(fetchStockIns(fetchParams));
       dispatch(fetchStockInStatistics({}));
     } catch (error) {
       console.error('Error in bulk action:', error);
@@ -389,12 +509,17 @@ export default function StockIn() {
   };
 
   const handleChangePage = (event: unknown, newPage: number) => {
-    setCurrentPage(newPage);
+    // newPage is 0-based, but server uses 1-based
+    const serverPage = newPage + 1;
+    dispatch(setPage(serverPage));
+    // The useEffect will automatically fetch new data when filters.page changes
   };
 
   const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setPageSize(parseInt(event.target.value, 10));
-    setCurrentPage(0);
+    const newPageSize = parseInt(event.target.value, 10);
+    dispatch(setLimit(newPageSize));
+    dispatch(setPage(1)); // Reset to first page when changing page size
+    // The useEffect will automatically fetch new data when filters change
   };
 
   const getStatusColor = (status: string) => {
@@ -1098,12 +1223,14 @@ export default function StockIn() {
             </Button>
           </Box>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-            Sẽ xuất {stockIns.length} phiếu nhập kho
+            Sẽ xuất dữ liệu theo bộ lọc hiện tại (tổng: {totalItems} phiếu nhập kho)
+            {isExporting && <CircularProgress size={16} sx={{ ml: 1 }} />}
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setExportDialogOpen(false)}>Hủy</Button>
-          <Button onClick={handleExportConfirm} variant="contained">
+          <Button onClick={() => setExportDialogOpen(false)} disabled={isExporting}>Hủy</Button>
+          <Button onClick={handleExportConfirm} variant="contained" disabled={isExporting}>
+            {isExporting ? <CircularProgress size={20} sx={{ mr: 1 }} /> : null}
             Xuất báo cáo
           </Button>
         </DialogActions>

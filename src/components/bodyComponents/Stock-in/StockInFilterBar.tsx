@@ -26,6 +26,7 @@ import { AppDispatch, RootState } from '../../../store';
 import { 
   updateFilters, 
   clearFilters, 
+  setPage,
   selectStockInsFilters,
   selectAllStockIns 
 } from '../../../store/slices/stockInSlice';
@@ -70,6 +71,10 @@ const StockInFilterBar: React.FC = () => {
     setLocalFilters(updatedFilters);
     
     // Auto-apply filters immediately - include empty strings to allow clearing
+    // Reset to page 1 when filter changes (except page/limit)
+    if (field !== 'page' && field !== 'limit') {
+      dispatch(setPage(1));
+    }
     dispatch(updateFilters(updatedFilters));
   };
 
@@ -96,6 +101,7 @@ const StockInFilterBar: React.FC = () => {
       endDate: ''
     };
     setLocalFilters(clearedFilters);
+    dispatch(setPage(1)); // Reset to page 1 when clearing filters
     dispatch(clearFilters());
   };
 

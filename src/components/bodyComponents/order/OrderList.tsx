@@ -1,28 +1,83 @@
 import { Avatar, Box, Button, Modal, Typography, Chip, CircularProgress } from "@mui/material";
-import { DataGrid, GridPagination } from "@mui/x-data-grid";
-import React, { useEffect, useState } from "react";
+import { DataGrid, GridPagination, GridPaginationModel } from "@mui/x-data-grid";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "../../../store";
-import { fetchInvoices, setSelectedInvoice, selectFilteredInvoices, selectInvoicesLoading, selectInvoicesError, selectInvoicesFilters } from "../../../store/slices/invoiceSlice";
+import { fetchInvoices, setSelectedInvoice, selectInvoices, selectInvoicesLoading, selectInvoicesError, selectInvoicesFilters, selectInvoicesPagination } from "../../../store/slices/invoiceSlice";
 import OrderModal from "./OrderModal";
 import OrderFilterBar from "./OrderFilterBar";
 
 export default function OrderList() {
   const dispatch = useDispatch<AppDispatch>();
-  const invoices = useSelector(selectFilteredInvoices);
+  const invoices = useSelector(selectInvoices);
   const isLoading = useSelector(selectInvoicesLoading);
   const error = useSelector(selectInvoicesError);
   const filters = useSelector(selectInvoicesFilters);
+  const pagination = useSelector(selectInvoicesPagination);
   
-  console.log('OrderList: Current state:', { invoices, isLoading, error, filters });
+  console.log('OrderList: Current state:', { invoices, isLoading, error, filters, pagination });
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [open, setOpen] = useState(false);
+  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
+    page: 0,
+    pageSize: 25,
+  });
+  
+  const isInitialMount = useRef(true);
+  const prevFiltersRef = useRef(filters);
 
+  // Fetch invoices function
+  const loadInvoices = useCallback((page: number, pageSize: number, customFilters?: typeof filters) => {
+    const currentFilters = customFilters || filters;
+    const queryParams = {
+      ...currentFilters,
+      page,
+      limit: pageSize,
+    };
+    console.log('OrderList: Fetching invoices with params:', queryParams);
+    dispatch(fetchInvoices(queryParams));
+  }, [dispatch, filters]);
+
+  // Initial load
   useEffect(() => {
-    console.log('OrderList: Dispatching fetchInvoices to load all data');
-    // Only fetch once to load all data, then use client-side filtering
-    dispatch(fetchInvoices({ page: 1, limit: 1000 })); // Load all invoices
-  }, [dispatch]);
+    console.log('OrderList: Initial load with page 1, limit 25');
+    dispatch(fetchInvoices({ page: 1, limit: 25 }));
+    isInitialMount.current = false;
+  }, []); // Only run once on mount
+
+  // Reload when filters change (reset to page 1)
+  useEffect(() => {
+    // Skip initial mount
+    if (isInitialMount.current) {
+      prevFiltersRef.current = filters;
+      return;
+    }
+
+    // Check if filters actually changed
+    const filtersChanged = 
+      prevFiltersRef.current.status !== filters.status ||
+      prevFiltersRef.current.paymentStatus !== filters.paymentStatus ||
+      prevFiltersRef.current.paymentMethod !== filters.paymentMethod ||
+      prevFiltersRef.current.customerName !== filters.customerName ||
+      prevFiltersRef.current.invoiceNumber !== filters.invoiceNumber ||
+      prevFiltersRef.current.startDate !== filters.startDate ||
+      prevFiltersRef.current.endDate !== filters.endDate;
+
+    if (filtersChanged) {
+      console.log('OrderList: Filters changed, reloading from page 1');
+      setPaginationModel(prev => ({ ...prev, page: 0 }));
+      loadInvoices(1, paginationModel.pageSize, filters);
+      prevFiltersRef.current = filters;
+    }
+  }, [filters, loadInvoices, paginationModel.pageSize]);
+
+  // Update pagination when pagination model changes
+  const handlePaginationModelChange = (newModel: GridPaginationModel) => {
+    console.log('OrderList: Pagination changed:', newModel);
+    setPaginationModel(newModel);
+    // DataGrid uses 0-based page index, API uses 1-based
+    loadInvoices(newModel.page + 1, newModel.pageSize);
+  };
 
   const handleOrderDetail = (order) => {
     console.log("the order is : ", order);
@@ -254,15 +309,14 @@ export default function OrderList() {
         rows={invoices}
         columns={columns}
         getRowId={(row) => row._id}
-        initialState={{
-          pagination: {
-            paginationModel: { page: 0, pageSize: 10 },
-          },
-        }}
+        paginationModel={paginationModel}
+        onPaginationModelChange={handlePaginationModelChange}
         pageSizeOptions={[10, 15, 25, 50]}
         rowSelection={false}
         pagination={true}
-        paginationMode="client"
+        paginationMode="server"
+        rowCount={pagination.total}
+        loading={isLoading}
         disableRowSelectionOnClick
         onRowClick={(params) => handleOrderDetail(params.row)}
         slots={{
