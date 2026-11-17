@@ -11,5 +11,17 @@
       
     </div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // GitHub Pages trả 404.html cho mọi deep link. Khôi phục lại đường dẫn
+      // mà 404.html đã nhét vào query (?/dashboard/orders) trước khi React chạy.
+      (function () {
+        var q = window.location.search;
+        if (q.indexOf('?/') !== 0) return;
+        var moduleScript = document.querySelector('script[type="module"][src*="assets/"]');
+        var base = moduleScript ? moduleScript.src.replace(/\/assets\/.*$/, '/') : '/';
+        var path = q.slice(2).split('&')[0];
+        window.history.replaceState(null, '', base + path);
+      })();
+    </script>
   </body>
 </html>

@@ -50,6 +50,7 @@ const App: React.FC = () => {
     //here we customize our typographi and in the variant prop we can use out myVar value
   });
   
+  const basePath = (import.meta.env.VITE_BASE_PATH || '/').replace(/\/$/, '');
   const router = createBrowserRouter(
     createRoutesFromElements(
       <>
@@ -77,7 +78,8 @@ const App: React.FC = () => {
           <Route path="/dashboard/profile" element={<Profile />}></Route>
         </Route>
       </>
-    )
+    ),
+    { basename: basePath }
   );
 
   return (

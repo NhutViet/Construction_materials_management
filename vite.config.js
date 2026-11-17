@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // Khi deploy lên GitHub Pages (project site) cần base là '/<repo>/'.
+  // Local dev giữ nguyên '/'.
+  base: process.env.VITE_BASE_PATH || '/',
   plugins: [react()],
   resolve: {
     extensions: ['.js', '.jsx', '.ts', '.tsx']
