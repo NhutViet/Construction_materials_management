@@ -1,4 +1,4 @@
-import { Edit, Payment, QrCode as QrCodeIcon, LocalShipping, CheckCircle, Edit as EditIcon } from "@mui/icons-material";
+import { Edit, Payment, QrCode as QrCodeIcon, LocalShipping, CheckCircle, Edit as EditIcon, History as HistoryIcon } from "@mui/icons-material";
 import {
   Box,
   Button,
@@ -25,6 +25,7 @@ import {
 } from "@mui/material";
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { RootState, AppDispatch } from "../../../store";
 import { fetchMaterialById, fetchMaterials, Material } from "../../../store/slices/materialSlice";
 import { Invoice, InvoiceItem, updateInvoiceStatus, updateItemDelivery, fetchInvoiceById, fetchDeliveredAmount } from "../../../store/slices/invoiceSlice";
@@ -40,6 +41,7 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
   const { selectedMaterial, isLoading: materialLoading, materials } = useSelector((state: RootState) => state.materials);
   const { selectedInvoice, deliveredAmount, deliveredAmountLoading } = useSelector((state: RootState) => state.invoice);
   const alertModal = useAlertModal();
+  const navigate = useNavigate();
   const [materialDetails, setMaterialDetails] = useState<Record<string, any>>({});
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -930,6 +932,22 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
             width: { xs: "100%", sm: "auto" },
             justifyContent: { xs: "center", sm: "flex-end" }
           }}>
+            {currentOrder.status !== 'cancelled' && (
+              <Button
+                variant="contained"
+                startIcon={<HistoryIcon />}
+                onClick={() => navigate(`/dashboard/orders/${currentOrder._id}/deliveries`)}
+                size="small"
+                sx={{
+                  fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                  px: { xs: 1, sm: 2 },
+                  py: { xs: 0.5, sm: 1 },
+                }}
+              >
+                <Box sx={{ display: { xs: "none", sm: "inline" } }}>Giao hàng / Lịch sử</Box>
+                <Box sx={{ display: { xs: "inline", sm: "none" } }}>Giao</Box>
+              </Button>
+            )}
             {currentOrder.paymentStatus !== 'paid' && currentOrder.status !== 'cancelled' && (
               <>
                 <Button

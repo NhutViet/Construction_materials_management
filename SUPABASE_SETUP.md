@@ -11,7 +11,9 @@ Code đã sẵn sàng: 8 Redux slice **không phải sửa**. Lớp `src/store/A
 
 Vào **SQL Editor → New query**, dán toàn bộ nội dung `supabase/migrations/0001_init.sql` rồi **Run**.
 
-Migration tạo: `profiles`, `materials`, `invoices`, `stock_in`, `notifications`, trigger tự tạo profile khi có user mới, RLS cơ bản cho phép client gọi trực tiếp.
+Sau đó chạy tiếp `supabase/migrations/0002_delivery_history.sql` để tạo bảng lịch sử giao hàng từng phần (`delivery_records`).
+
+Migration tạo: `profiles`, `materials`, `invoices`, `stock_in`, `notifications`, `delivery_records`, trigger tự tạo profile khi có user mới, RLS cơ bản cho phép client gọi trực tiếp.
 
 > RLS hiện đang là cấu hình prototype: mọi user đã đăng nhập đều thấy mọi bản ghi. Nếu cần phân quyền theo từng user, thêm cột `owner` và đổi policy tương ứng.
 

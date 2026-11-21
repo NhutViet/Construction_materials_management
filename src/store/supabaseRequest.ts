@@ -154,6 +154,78 @@ function deliveredAmountOf(invoice: any) {
   };
 }
 
+const genUuid = () =>
+  globalThis.crypto?.randomUUID?.() ??
+  'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+
+function deliveryHistoryOf(invoice: any, records: any[]) {
+  const sorted = [...records].sort((a, b) => (a.deliveredAt < b.deliveredAt ? 1 : -1));
+  const batchMap = new Map<string, any>();
+  sorted.forEach((record) => {
+    const key = record.batchId || record._id;
+    const batch = batchMap.get(key) || {
+      batchId: key,
+      deliveredAt: record.deliveredAt,
+      deliveredBy: record.deliveredBy,
+      deliveredByName: record.deliveredByName || '',
+      notes: record.notes || '',
+      totalQuantity: 0,
+      items: [],
+    };
+    batch.totalQuantity = round(batch.totalQuantity + num(record.quantity));
+    batch.items.push({
+      recordId: record._id,
+      itemIndex: record.itemIndex,
+      materialId: record.materialId,
+      materialName: record.materialName,
+      unit: record.unit || '',
+      quantity: num(record.quantity),
+    });
+    batchMap.set(key, batch);
+  });
+
+  const items = (invoice.items || []).map((item: any, index: number) => {
+    const ordered = num(item.quantity);
+    const delivered = num(item.deliveredQuantity);
+    return {
+      itemIndex: index,
+      materialId: item.materialId,
+      materialName: item.materialName,
+      unit: item.unit || '',
+      unitPrice: num(item.unitPrice),
+      orderedQuantity: ordered,
+      deliveredQuantity: delivered,
+      remainingQuantity: round(ordered - delivered),
+      deliveryStatus: delivered >= ordered ? 'delivered' : delivered > 0 ? 'partial' : 'pending',
+    };
+  });
+
+  return {
+    invoiceId: invoice._id,
+    invoiceNumber: invoice.invoiceNumber,
+    customerName: invoice.customerName,
+    customerPhone: invoice.customerPhone || '',
+    customerAddress: invoice.customerAddress || '',
+    invoiceStatus: invoice.status,
+    deliveredAt: invoice.deliveredAt || '',
+    items,
+    records: sorted,
+    batches: Array.from(batchMap.values()).sort((a, b) => (a.deliveredAt < b.deliveredAt ? 1 : -1)),
+    summary: {
+      totalItems: items.length,
+      totalQuantity: sum(items.map((i) => i.orderedQuantity)),
+      deliveredQuantity: sum(items.map((i) => i.deliveredQuantity)),
+      remainingQuantity: sum(items.map((i) => i.remainingQuantity)),
+      totalBatches: batchMap.size,
+      lastDeliveredAt: sorted[0]?.deliveredAt || '',
+    },
+  };
+}
+
 // ---------------------------------------------------------------- helpers: stock-in
 const computeStockTotals = (items: any[], taxRate = 0, discountRate = 0) =>
   computeTotals(items.map((i) => ({ totalPrice: i.totalPrice })), taxRate, discountRate);
@@ -334,6 +406,15 @@ export async function supabaseRequest({ method, path, body, params, isPublic }: 
     if (method === 'GET' && ['pending', 'confirmed', 'delivered', 'unpaid', 'paid'].includes(second)) return listInvoices({ status: ['pending', 'confirmed', 'delivered'].includes(second) ? second : undefined, paymentStatus: ['unpaid', 'paid'].includes(second) ? second : undefined });
     if (method === 'GET' && second === 'payment-method') return listInvoices({ paymentMethod: third });
 
+    if (method === 'GET' && second && third === 'delivery-history') {
+      const { data: invoice, error: invoiceError } = await supabase.from('invoices').select('*').eq('_id', second).maybeSingle();
+      if (invoiceError) fail(invoiceError.message);
+      if (!invoice) fail('Không tìm thấy hóa đơn', 404);
+      const { data: records, error } = await supabase.from('delivery_records').select('*').eq('invoiceId', second).order('deliveredAt', { ascending: false });
+      if (error) fail(error.message);
+      return deliveryHistoryOf(invoice, records || []);
+    }
+
     if (method === 'GET' && second) {
       const id = second === 'number' ? null : second;
       let result: any;
@@ -358,6 +439,72 @@ export async function supabaseRequest({ method, path, body, params, isPublic }: 
       if (!invoice) fail('Không tìm thấy hóa đơn', 404);
       const payment = derivePayment(num(invoice.paidAmount) + num(body?.amount), num(invoice.totalAmount));
       return check(await supabase.from('invoices').update({ ...payment, paymentMethod: body?.paymentMethod || invoice.paymentMethod, notes: body?.notes || invoice.notes, updatedAt: nowIso() }).eq('_id', second).select().single());
+    }
+    if (method === 'POST' && second && third === 'deliveries') {
+      const { data: invoice, error: invoiceError } = await supabase.from('invoices').select('*').eq('_id', second).maybeSingle();
+      if (invoiceError) fail(invoiceError.message);
+      if (!invoice) fail('Không tìm thấy hóa đơn', 404);
+      if (invoice.isDeleted) fail('Hóa đơn đã bị xóa', 400);
+      if (invoice.status === 'cancelled') fail('Hóa đơn đã hủy, không thể giao hàng', 400);
+
+      const user = await currentUser();
+      const { data: profile } = await supabase.from('profiles').select('fullname').eq('id', user.id).maybeSingle();
+      const deliveredAt = body?.deliveredAt || nowIso();
+      const batchId = genUuid();
+      const items = [...(invoice.items || [])];
+      const requested = (body?.items || []).filter((entry: any) => num(entry.quantity) > 0);
+      if (!requested.length) fail('Vui lòng nhập số lượng giao hàng', 400);
+
+      const records: any[] = [];
+      for (const entry of requested) {
+        const index = num(entry.itemIndex);
+        const item = items[index];
+        if (!item) fail(`Không tìm thấy mặt hàng #${index + 1}`, 404);
+
+        const ordered = num(item.quantity);
+        const already = num(item.deliveredQuantity);
+        const quantity = num(entry.quantity);
+        if (already + quantity > ordered) {
+          fail(`"${item.materialName}" chỉ còn ${round(ordered - already)} ${item.unit || ''} cần giao`, 400);
+        }
+
+        const newDelivered = round(already + quantity);
+        items[index] = {
+          ...item,
+          deliveredQuantity: newDelivered,
+          deliveryStatus: newDelivered >= ordered ? 'delivered' : newDelivered > 0 ? 'partial' : 'pending',
+          deliveredAt,
+          deliveredBy: user.id,
+        };
+        records.push({
+          invoiceId: second,
+          invoiceNumber: invoice.invoiceNumber,
+          batchId,
+          itemIndex: index,
+          materialId: item.materialId || null,
+          materialName: item.materialName || '',
+          unit: item.unit || '',
+          quantity,
+          deliveredAt,
+          deliveredBy: user.id,
+          deliveredByName: profile?.fullname || '',
+          notes: body?.notes || '',
+          createdAt: nowIso(),
+        });
+      }
+
+      const allDelivered = items.every((item: any) => num(item.deliveredQuantity) >= num(item.quantity));
+      const anyDelivered = items.some((item: any) => num(item.deliveredQuantity) > 0);
+      const status = allDelivered ? 'delivered' : anyDelivered ? 'confirmed' : invoice.status;
+
+      const updated = check(
+        await supabase.from('invoices').update({ items, status, updatedAt: nowIso() }).eq('_id', second).select().single()
+      );
+
+      const { error: recordError } = await supabase.from('delivery_records').insert(records);
+      if (recordError) fail(recordError.message);
+
+      return updated;
     }
     if (method === 'POST' && second && third === 'send-email') return ok(null, `Đã gửi hóa đơn tới ${body?.email || ''}`);
     if (method === 'POST') {
@@ -404,9 +551,35 @@ export async function supabaseRequest({ method, path, body, params, isPublic }: 
       const items = [...(invoice.items || [])];
       if (!items[index]) fail('Không tìm thấy item', 404);
       const qty = num(items[index].quantity);
+      const previousDelivered = num(items[index].deliveredQuantity);
       const delivered = Math.min(qty, num(body?.deliveredQuantity));
-      items[index] = { ...items[index], deliveredQuantity: delivered, deliveryStatus: delivered >= qty ? 'delivered' : delivered > 0 ? 'partial' : 'pending', deliveredAt: delivered > 0 ? nowIso() : null };
-      return check(await supabase.from('invoices').update({ items, updatedAt: nowIso() }).eq('_id', second).select().single());
+      const deliveredAt = delivered > 0 ? nowIso() : null;
+      items[index] = { ...items[index], deliveredQuantity: delivered, deliveryStatus: delivered >= qty ? 'delivered' : delivered > 0 ? 'partial' : 'pending', deliveredAt };
+      const updated = check(await supabase.from('invoices').update({ items, updatedAt: nowIso() }).eq('_id', second).select().single());
+
+      // Ghi thêm lịch sử phần giao tăng thêm (không ghi đè lịch sử cũ).
+      const delta = round(delivered - previousDelivered);
+      if (delta > 0) {
+        const user = await currentUser();
+        const { data: profile } = await supabase.from('profiles').select('fullname').eq('id', user.id).maybeSingle();
+        const { error: recordError } = await supabase.from('delivery_records').insert({
+          invoiceId: second,
+          invoiceNumber: invoice.invoiceNumber,
+          batchId: genUuid(),
+          itemIndex: index,
+          materialId: items[index].materialId || null,
+          materialName: items[index].materialName || '',
+          unit: items[index].unit || '',
+          quantity: delta,
+          deliveredAt: deliveredAt || nowIso(),
+          deliveredBy: user.id,
+          deliveredByName: profile?.fullname || '',
+          notes: body?.notes || '',
+          createdAt: nowIso(),
+        });
+        if (recordError) fail(recordError.message);
+      }
+      return updated;
     }
     if (method === 'PATCH' && second) {
       const items = await buildInvoiceItems(body.items || []);
