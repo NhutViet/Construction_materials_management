@@ -49,7 +49,7 @@ const statusLabel = (status: string) => {
     case 'pending':
       return 'Chờ xử lý';
     case 'confirmed':
-      return 'Đang giao một phần';
+      return 'Đang xử lý / giao một phần';
     case 'delivered':
       return 'Đã giao đủ';
     case 'cancelled':
@@ -103,6 +103,11 @@ const DeliveryHistoryPage: React.FC = () => {
 
   const historyItems = deliveryHistory?.items || [];
   const summary = deliveryHistory?.summary;
+  const activeInvoice =
+    selectedInvoice && selectedInvoice._id === invoiceId ? selectedInvoice : null;
+  const headerInvoiceNumber = deliveryHistory?.invoiceNumber || activeInvoice?.invoiceNumber || '';
+  const headerCustomerName = deliveryHistory?.customerName || activeInvoice?.customerName || '';
+  const headerCustomerPhone = deliveryHistory?.customerPhone || activeInvoice?.customerPhone || '';
 
   const totalToDeliver = useMemo(
     () =>
@@ -176,15 +181,15 @@ const DeliveryHistoryPage: React.FC = () => {
             Giao hàng & lịch sử giao hàng
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {selectedInvoice?.invoiceNumber || deliveryHistory?.invoiceNumber || '—'}
-            {selectedInvoice?.customerName ? ` · ${selectedInvoice.customerName}` : ''}
-            {selectedInvoice?.customerPhone ? ` · ${selectedInvoice.customerPhone}` : ''}
+            {headerInvoiceNumber || '—'}
+            {headerCustomerName ? ` · ${headerCustomerName}` : ''}
+            {headerCustomerPhone ? ` · ${headerCustomerPhone}` : ''}
           </Typography>
         </Box>
-        {selectedInvoice && (
+        {activeInvoice && (
           <Chip
-            label={statusLabel(selectedInvoice.status)}
-            color={statusColor(selectedInvoice.status)}
+            label={statusLabel(activeInvoice.status)}
+            color={statusColor(activeInvoice.status)}
             sx={{ fontWeight: 600 }}
           />
         )}
@@ -403,13 +408,13 @@ const DeliveryHistoryPage: React.FC = () => {
           ))
         )}
 
-        {selectedInvoice && (
+        {activeInvoice && (
           <>
             <Divider sx={{ my: 2 }} />
             <Typography variant="body2" color="text.secondary">
-              Tổng giá trị hóa đơn: <strong>{formatCurrency(selectedInvoice.totalAmount)}</strong>
-              {' · '}Đã thanh toán: <strong>{formatCurrency(selectedInvoice.paidAmount)}</strong>
-              {' · '}Còn lại: <strong>{formatCurrency(selectedInvoice.remainingAmount)}</strong>
+              Tổng giá trị hóa đơn: <strong>{formatCurrency(activeInvoice.totalAmount)}</strong>
+              {' · '}Đã thanh toán: <strong>{formatCurrency(activeInvoice.paidAmount)}</strong>
+              {' · '}Còn lại: <strong>{formatCurrency(activeInvoice.remainingAmount)}</strong>
             </Typography>
           </>
         )}
