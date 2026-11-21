@@ -109,6 +109,21 @@ const DeliveryHistoryPage: React.FC = () => {
   const headerCustomerName = deliveryHistory?.customerName || activeInvoice?.customerName || '';
   const headerCustomerPhone = deliveryHistory?.customerPhone || activeInvoice?.customerPhone || '';
 
+  const deliveryChip = (() => {
+    if (!activeInvoice) return null;
+    if (activeInvoice.status === 'cancelled') return { label: 'Đã hủy', color: 'error' as const };
+    if (summary) {
+      if (summary.totalQuantity > 0 && summary.remainingQuantity <= 0) {
+        return { label: 'Đã giao đủ', color: 'success' as const };
+      }
+      if (summary.deliveredQuantity > 0) {
+        return { label: 'Đang giao một phần', color: 'info' as const };
+      }
+      return { label: 'Chưa giao', color: 'warning' as const };
+    }
+    return { label: statusLabel(activeInvoice.status), color: statusColor(activeInvoice.status) };
+  })();
+
   const totalToDeliver = useMemo(
     () =>
       Object.values(quantities).reduce((acc, value) => {
@@ -186,10 +201,10 @@ const DeliveryHistoryPage: React.FC = () => {
             {headerCustomerPhone ? ` · ${headerCustomerPhone}` : ''}
           </Typography>
         </Box>
-        {activeInvoice && (
+        {activeInvoice && deliveryChip && (
           <Chip
-            label={statusLabel(activeInvoice.status)}
-            color={statusColor(activeInvoice.status)}
+            label={deliveryChip.label}
+            color={deliveryChip.color}
             sx={{ fontWeight: 600 }}
           />
         )}
