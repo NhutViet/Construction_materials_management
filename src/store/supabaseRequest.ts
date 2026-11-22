@@ -11,6 +11,7 @@ import {
   PAYMENT_METHODS,
 } from './supabaseData';
 import * as A from './supabaseAnalytics';
+import { matchesSearchTerm } from '../utils/vietnameseUtils';
 
 interface SupabaseRequestArgs {
   method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
@@ -226,6 +227,75 @@ function deliveryHistoryOf(invoice: any, records: any[]) {
   };
 }
 
+function toIsoDate(value: any, endOfDay = false) {
+  if (!value) return undefined;
+  const text = String(value).trim();
+  if (!text) return undefined;
+  const candidate = /^\d{4}-\d{2}-\d{2}$/.test(text)
+    ? `${text}T${endOfDay ? '23:59:59.999' : '00:00:00.000'}`
+    : text;
+  const date = new Date(candidate);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+}
+
+function groupDeliveryBatches(records: any[], invoiceMap: Map<string, any>) {
+  const map = new Map<string, any>();
+
+  records.forEach((record) => {
+    const invoice = invoiceMap.get(record.invoiceId);
+    if (invoice?.isDeleted) return;
+
+    const key = `${record.invoiceId}:${record.batchId || record._id}`;
+    let batch = map.get(key);
+    if (!batch) {
+      batch = {
+        batchId: record.batchId || record._id,
+        invoiceId: record.invoiceId,
+        invoiceNumber: record.invoiceNumber || invoice?.invoiceNumber || '',
+        customerName: invoice?.customerName || '',
+        customerPhone: invoice?.customerPhone || '',
+        customerAddress: invoice?.customerAddress || '',
+        invoiceStatus: invoice?.status || '',
+        deliveredAt: record.deliveredAt,
+        deliveredBy: record.deliveredBy || '',
+        deliveredByName: record.deliveredByName || '',
+        notes: record.notes || '',
+        totalQuantity: 0,
+        deliveredValue: 0,
+        itemCount: 0,
+        items: [] as any[],
+      };
+      map.set(key, batch);
+    }
+
+    const invoiceItems = invoice?.items || [];
+    const item =
+      invoiceItems[record.itemIndex] ||
+      invoiceItems.find((entry: any) => entry.materialId && entry.materialId === record.materialId);
+    const unitPrice = num(item?.unitPrice);
+    const quantity = num(record.quantity);
+
+    batch.totalQuantity = round(batch.totalQuantity + quantity);
+    batch.deliveredValue = round(batch.deliveredValue + quantity * unitPrice);
+    batch.itemCount += 1;
+    if (!batch.notes && record.notes) batch.notes = record.notes;
+    if (!batch.deliveredByName && record.deliveredByName) batch.deliveredByName = record.deliveredByName;
+    batch.items.push({
+      recordId: record._id,
+      itemIndex: record.itemIndex,
+      materialId: record.materialId,
+      materialName: record.materialName,
+      unit: record.unit || '',
+      quantity,
+      unitPrice,
+    });
+  });
+
+  return Array.from(map.values()).sort((a, b) =>
+    a.deliveredAt < b.deliveredAt ? 1 : a.deliveredAt > b.deliveredAt ? -1 : 0
+  );
+}
+
 // ---------------------------------------------------------------- helpers: stock-in
 const computeStockTotals = (items: any[], taxRate = 0, discountRate = 0) =>
   computeTotals(items.map((i) => ({ totalPrice: i.totalPrice })), taxRate, discountRate);
@@ -349,6 +419,79 @@ export async function supabaseRequest({ method, path, body, params, isPublic }: 
       await supabase.from('materials').delete().eq('_id', second);
       return data;
     }
+  }
+
+  // ------------------------------------------------------------ DELIVERY LOG
+  if (resource === 'deliveries') {
+    if (method !== 'GET') fail('Không hỗ trợ thao tác này', 405);
+
+    const search = String(query.search || '').trim();
+    const fromIso = toIsoDate(query.from, false);
+    const toIso = toIsoDate(query.to, true);
+    const invoiceIdFilter = query.invoiceId ? String(query.invoiceId) : '';
+
+    let records: any[] = [];
+    const pageSize = 1000;
+    for (let start = 0; start <= 9000; start += pageSize) {
+      let q = supabase
+        .from('delivery_records')
+        .select('*')
+        .order('deliveredAt', { ascending: false })
+        .range(start, start + pageSize - 1);
+      if (fromIso) q = q.gte('deliveredAt', fromIso);
+      if (toIso) q = q.lte('deliveredAt', toIso);
+      if (invoiceIdFilter) q = q.eq('invoiceId', invoiceIdFilter);
+      const { data, error } = await q;
+      if (error) fail(error.message);
+      records = records.concat(data || []);
+      if (!data || data.length < pageSize) break;
+    }
+
+    const invoiceMap = new Map<string, any>();
+    const invoiceIds = Array.from(new Set(records.map((record) => record.invoiceId).filter(Boolean)));
+    for (let index = 0; index < invoiceIds.length; index += 100) {
+      const chunk = invoiceIds.slice(index, index + 100);
+      const { data, error } = await supabase.from('invoices').select('*').in('_id', chunk);
+      if (error) fail(error.message);
+      (data || []).forEach((invoice) => invoiceMap.set(invoice._id, invoice));
+    }
+
+    const batches = groupDeliveryBatches(records, invoiceMap);
+    const filtered = search
+      ? batches.filter((batch) =>
+          matchesSearchTerm(
+            [
+              batch.invoiceNumber,
+              batch.customerName,
+              batch.customerPhone,
+              batch.deliveredByName,
+              batch.notes,
+              ...batch.items.map((item: any) => item.materialName),
+            ]
+              .filter(Boolean)
+              .join(' '),
+            search
+          )
+        )
+      : batches;
+
+    const page = Math.max(1, num(query.page) || 1);
+    const limit = Math.max(1, Math.min(100, num(query.limit) || 20));
+    const startIndex = (page - 1) * limit;
+
+    return {
+      deliveries: filtered.slice(startIndex, startIndex + limit),
+      total: filtered.length,
+      page,
+      limit,
+      summary: {
+        totalBatches: filtered.length,
+        totalQuantity: sum(filtered.map((batch) => batch.totalQuantity)),
+        totalInvoices: new Set(filtered.map((batch) => batch.invoiceId)).size,
+        totalRecords: sum(filtered.map((batch) => batch.itemCount)),
+        deliveredValue: sum(filtered.map((batch) => batch.deliveredValue)),
+      },
+    };
   }
 
   // ------------------------------------------------------------ INVOICES

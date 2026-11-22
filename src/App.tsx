@@ -17,6 +17,7 @@ import StockIn from "./components/bodyComponents/Stock-in/Stock-in";
 import Setting from "./components/bodyComponents/Settings/Setting";
 import Order from "./components/bodyComponents/order/Order";
 import DeliveryHistoryPage from "./components/bodyComponents/order/DeliveryHistoryPage";
+import DeliveryLogPage from "./components/bodyComponents/order/DeliveryLogPage";
 import Profile from "./components/bodyComponents/profile/Profile";
 import Login from "./components/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -71,6 +72,7 @@ const App: React.FC = () => {
           <Route path="/dashboard/inventory" element={<Inventory />}></Route>
           <Route path="/dashboard/orders" element={<Order />}></Route>
           <Route path="/dashboard/orders/:invoiceId/deliveries" element={<DeliveryHistoryPage />}></Route>
+          <Route path="/dashboard/deliveries" element={<DeliveryLogPage />}></Route>
           <Route path="/dashboard/customers" element={<Customer />}></Route>
           <Route path="/dashboard/revenue" element={<Revenue />}></Route>
           <Route path="/dashboard/growth" element={<Growth />}></Route>

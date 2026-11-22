@@ -1,11 +1,13 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import OrderList from "./OrderList";
 import CreateInvoiceModal from "./CreateInvoiceModal";
 import { Box, Button, Typography } from "@mui/material";
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, LocalShippingOutlined } from "@mui/icons-material";
 
 export default function Order() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const navigate = useNavigate();
 
   const handleOpenCreateModal = () => {
     setIsCreateModalOpen(true);
@@ -56,20 +58,36 @@ export default function Order() {
           >
             Hoá đơn
           </Typography>
-          <Button 
-            variant="contained" 
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={handleOpenCreateModal}
-            sx={{ 
-              fontSize: { xs: '0.875rem', sm: '1rem' }, 
-              py: { xs: 1, sm: 1.5 },
-              px: { xs: 2, sm: 3 },
-              width: { xs: '100%', sm: 'auto' }
+          <Box
+            sx={{
+              display: 'flex',
+              gap: 1,
+              flexDirection: { xs: 'column', sm: 'row' },
+              width: { xs: '100%', sm: 'auto' },
             }}
           >
-            Thêm Hoá Đơn
-          </Button>
+            <Button
+              variant="outlined"
+              startIcon={<LocalShippingOutlined />}
+              onClick={() => navigate('/dashboard/deliveries')}
+              sx={{ fontSize: { xs: '0.875rem', sm: '1rem' }, py: { xs: 1, sm: 1.5 }, px: { xs: 2, sm: 3 } }}
+            >
+              Lịch sử giao hàng
+            </Button>
+            <Button 
+              variant="contained" 
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={handleOpenCreateModal}
+              sx={{ 
+                fontSize: { xs: '0.875rem', sm: '1rem' }, 
+                py: { xs: 1, sm: 1.5 },
+                px: { xs: 2, sm: 3 }
+              }}
+            >
+              Thêm Hoá Đơn
+            </Button>
+          </Box>
         </Box>
         <Box sx={{ flex: 1, overflow: 'hidden' }}>
           <OrderList />
