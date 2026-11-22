@@ -647,6 +647,12 @@ export async function supabaseRequest({ method, path, body, params, isPublic }: 
       const { error: recordError } = await supabase.from('delivery_records').insert(records);
       if (recordError) fail(recordError.message);
 
+      // Trừ tồn kho theo đúng số lượng thực giao trong đợt này.
+      await adjustMaterialStock(
+        records.map((record) => ({ materialId: record.materialId, quantity: record.quantity })),
+        -1
+      );
+
       return updated;
     }
     if (method === 'POST' && second && third === 'send-email') return ok(null, `Đã gửi hóa đơn tới ${body?.email || ''}`);
@@ -674,7 +680,7 @@ export async function supabaseRequest({ method, path, body, params, isPublic }: 
         createdAt: nowIso(), updatedAt: nowIso(),
       };
       const invoice = check(await supabase.from('invoices').insert(payload).select().single());
-      await adjustMaterialStock(items, -1);
+      // Không trừ tồn kho khi tạo hóa đơn. Tồn kho chỉ giảm khi thực tế giao hàng.
       return invoice;
     }
 
@@ -733,17 +739,80 @@ export async function supabaseRequest({ method, path, body, params, isPublic }: 
         });
         if (recordError) fail(recordError.message);
       }
+
+      // Điều chỉnh tồn kho theo phần chênh lệch: giao thêm thì trừ, giảm số đã giao thì hoàn lại.
+      if (delta !== 0) {
+        await adjustMaterialStock(
+          [{ materialId: items[index].materialId, quantity: Math.abs(delta) }],
+          delta > 0 ? -1 : 1
+        );
+      }
       return updated;
     }
     if (method === 'PATCH' && second) {
-      const items = await buildInvoiceItems(body.items || []);
+      const { data: existingInvoice, error: existingError } = await supabase.from('invoices').select('*').eq('_id', second).maybeSingle();
+      if (existingError) fail(existingError.message);
+      if (!existingInvoice) fail('Không tìm thấy hóa đơn', 404);
+
+      const oldItems = existingInvoice.items || [];
+      const newItems = await buildInvoiceItems(body.items || []);
+
+      // Giữ nguyên số lượng đã giao khi sửa hóa đơn và không cho giảm dưới mức đã giao.
+      const items = newItems.map((item, index) => {
+        const oldItem =
+          oldItems.find((old: any) => old.materialId && old.materialId === item.materialId) ||
+          oldItems[index];
+        const delivered = num(oldItem?.deliveredQuantity);
+        if (delivered > item.quantity) {
+          fail(
+            `"${item.materialName}" đã giao ${delivered} ${item.unit || ''}, không thể giảm số lượng xuống ${item.quantity}.`,
+            400
+          );
+        }
+        return {
+          ...item,
+          deliveredQuantity: delivered,
+          deliveryStatus: delivered >= item.quantity ? 'delivered' : delivered > 0 ? 'partial' : 'pending',
+          ...(oldItem?.deliveredAt ? { deliveredAt: oldItem.deliveredAt } : {}),
+          ...(oldItem?.deliveredBy ? { deliveredBy: oldItem.deliveredBy } : {}),
+        };
+      });
+
+      oldItems.forEach((oldItem: any) => {
+        const delivered = num(oldItem.deliveredQuantity);
+        const stillExists = items.some(
+          (item: any) => item.materialId && item.materialId === oldItem.materialId
+        );
+        if (delivered > 0 && !stillExists) {
+          fail(
+            `Không thể xóa mặt hàng "${oldItem.materialName}" vì đã giao ${delivered} ${oldItem.unit || ''}.`,
+            400
+          );
+        }
+      });
+
       const taxRate = num(body.taxRate);
       const discountRate = num(body.discountRate);
       const totals = computeTotals(items, taxRate, discountRate);
       const payment = derivePayment(num(body.paidAmount), totals.totalAmount);
+      const allDelivered =
+        items.length > 0 &&
+        items.every((item: any) => num(item.deliveredQuantity) >= num(item.quantity));
+      const anyDelivered = items.some((item: any) => num(item.deliveredQuantity) > 0);
+      let status = existingInvoice.status;
+      if (status !== 'cancelled') {
+        status = allDelivered
+          ? 'delivered'
+          : anyDelivered
+          ? 'confirmed'
+          : status === 'delivered'
+          ? 'pending'
+          : status;
+      }
+
       const patch: Record<string, any> = {
         customerName: body.customerName, customerPhone: body.customerPhone || '', customerAddress: body.customerAddress || '',
-        items, taxRate, discountRate, ...totals, ...payment,
+        items, taxRate, discountRate, ...totals, ...payment, status,
         paymentMethod: body.paymentMethod || 'cash', notes: body.notes || '', deliveryDate: body.deliveryDate || null,
         updatedAt: nowIso(),
       };

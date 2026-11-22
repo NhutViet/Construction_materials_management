@@ -139,37 +139,6 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
     }
   }, [dispatch, error]);
 
-  // Real-time inventory validation when form data changes
-  useEffect(() => {
-    if (formData.items.length > 0) {
-      // Check inventory for all items
-      for (const item of formData.items) {
-        const material = materials.find(m => m._id === item.materialId);
-        if (material) {
-          // Need to consider the original invoice quantity that's already "reserved"
-          const originalInvoiceQuantity = invoice?.items.find(origItem => origItem.materialId === item.materialId)?.quantity || 0;
-          const availableQuantity = material.quantity + originalInvoiceQuantity;
-          
-          if (item.quantity > availableQuantity) {
-            setErrors(prev => ({
-              ...prev,
-              items: `Không đủ tồn kho cho "${item.materialName}". Tồn kho khả dụng: ${availableQuantity}, yêu cầu: ${item.quantity}`
-            }));
-            return;
-          }
-        }
-      }
-      
-      // Clear inventory error if all items are valid
-      if (errors.items && errors.items.includes('Không đủ tồn kho')) {
-        setErrors(prev => ({
-          ...prev,
-          items: undefined
-        }));
-      }
-    }
-  }, [formData.items, materials, errors.items, invoice]);
-
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -189,18 +158,12 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
       newErrors.items = 'Phải có ít nhất một sản phẩm';
     }
 
-    // Kiểm tra tồn kho cho tất cả items trong hóa đơn
+    // Không cho giảm số lượng xuống dưới số đã giao.
     for (const item of formData.items) {
-      const material = materials.find(m => m._id === item.materialId);
-      if (material) {
-        // Need to consider the original invoice quantity that's already "reserved"
-        const originalInvoiceQuantity = invoice?.items.find(origItem => origItem.materialId === item.materialId)?.quantity || 0;
-        const availableQuantity = material.quantity + originalInvoiceQuantity;
-        
-        if (item.quantity > availableQuantity) {
-          newErrors.items = `Không đủ tồn kho cho "${item.materialName}". Tồn kho khả dụng: ${availableQuantity}, yêu cầu: ${item.quantity}`;
-          break;
-        }
+      const delivered = Number(item.deliveredQuantity || 0);
+      if (item.quantity < delivered) {
+        newErrors.items = `"${item.materialName}" đã giao ${delivered} ${item.unit || ''}, không thể giảm số lượng xuống ${item.quantity}.`;
+        break;
       }
     }
 
@@ -226,26 +189,6 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
     const existingItemIndex = formData.items.findIndex(
       item => item.materialId === selectedMaterial._id
     );
-
-    // Calculate total quantity that will be in the invoice after adding
-    let totalQuantityInInvoice = itemQuantity;
-    if (existingItemIndex >= 0) {
-      totalQuantityInInvoice += formData.items[existingItemIndex].quantity;
-    }
-
-    // Check inventory availability - need to consider the original invoice quantity
-    // The original invoice items are already "reserved" from inventory
-    const originalInvoiceQuantity = invoice?.items.find(item => item.materialId === selectedMaterial._id)?.quantity || 0;
-    const availableQuantity = selectedMaterial.quantity + originalInvoiceQuantity;
-    
-    if (totalQuantityInInvoice > availableQuantity) {
-      const errorMessage = `Không đủ tồn kho cho "${selectedMaterial.name}". Tồn kho khả dụng: ${availableQuantity}, yêu cầu: ${totalQuantityInInvoice}`;
-      setErrors(prev => ({
-        ...prev,
-        items: errorMessage
-      }));
-      return;
-    }
 
     const newItem = {
       materialId: selectedMaterial._id,
@@ -286,6 +229,15 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
   };
 
   const removeItemFromInvoice = (index: number) => {
+    const item = formData.items[index];
+    const delivered = Number(item?.deliveredQuantity || 0);
+    if (delivered > 0) {
+      setErrors(prev => ({
+        ...prev,
+        items: `Không thể xóa "${item.materialName}" vì đã giao ${delivered} ${item.unit || ''}.`
+      }));
+      return;
+    }
     const updatedItems = formData.items.filter((_, i) => i !== index);
     setFormData(prev => ({ ...prev, items: updatedItems }));
   };
@@ -295,44 +247,22 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
 
     const updatedItems = [...formData.items];
     const item = updatedItems[index];
-    
-    // Find the material to check available stock
-    const material = materials.find(m => m._id === item.materialId);
-    if (material) {
-      // Check if new quantity exceeds available stock
-      // Need to consider the original invoice quantity that's already "reserved"
-      const originalInvoiceQuantity = invoice?.items.find(origItem => origItem.materialId === item.materialId)?.quantity || 0;
-      const availableQuantity = material.quantity + originalInvoiceQuantity;
-      
-      if (newQuantity > availableQuantity) {
-        const errorMessage = `Không đủ tồn kho cho "${material.name}". Tồn kho khả dụng: ${availableQuantity}, yêu cầu: ${newQuantity}`;
-        setErrors(prev => ({
-          ...prev,
-          items: errorMessage
-        }));
-        return;
-      }
-    }
+    const delivered = Number(item.deliveredQuantity || 0);
 
-    // If new quantity is less than current deliveredQuantity, adjust deliveredQuantity
-    const currentDeliveredQuantity = item.deliveredQuantity || 0;
-    if (newQuantity < currentDeliveredQuantity) {
-      // Adjust deliveredQuantity to match new quantity (can't deliver more than ordered)
-      updatedItems[index].deliveredQuantity = newQuantity;
-      // Update delivery status: if new quantity equals adjusted deliveredQuantity, it's fully delivered
-      if (newQuantity === 0) {
-        updatedItems[index].deliveryStatus = 'pending';
-      } else {
-        // Since deliveredQuantity is now equal to quantity, status is delivered
-        updatedItems[index].deliveryStatus = 'delivered';
-      }
+    // Không cho giảm số lượng xuống dưới số đã giao.
+    if (newQuantity < delivered) {
+      setErrors(prev => ({
+        ...prev,
+        items: `"${item.materialName}" đã giao ${delivered} ${item.unit || ''}, không thể giảm số lượng xuống ${newQuantity}.`
+      }));
+      return;
     }
 
     updatedItems[index].quantity = newQuantity;
     updatedItems[index].totalPrice = updatedItems[index].unitPrice * newQuantity;
     setFormData(prev => ({ ...prev, items: updatedItems }));
 
-    // Clear any previous inventory errors
+    // Clear previous errors
     if (errors.items) {
       setErrors(prev => ({
         ...prev,
@@ -574,10 +504,8 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
                   />
                 )}
                 renderOption={(props, option) => {
-                  const originalInvoiceQuantity = invoice?.items.find(origItem => origItem.materialId === option._id)?.quantity || 0;
-                  const availableQuantity = option.quantity + originalInvoiceQuantity;
-                  const isLowStock = availableQuantity <= 10;
-                  const isOutOfStock = availableQuantity === 0;
+                  const isLowStock = option.quantity <= 10;
+                  const isOutOfStock = option.quantity === 0;
                   
                   return (
                     <Box component="li" {...props}>
@@ -592,16 +520,11 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
                           />
                         </Box>
                         <Typography variant="caption" color="text.secondary">
-                          {option.price.toLocaleString('vi-VN')}đ/{option.unit} - Khả dụng: {availableQuantity}
+                          {option.price.toLocaleString('vi-VN')}đ/{option.unit} - Tồn kho: {option.quantity}
                         </Typography>
                       </Box>
                     </Box>
                   );
-                }}
-                getOptionDisabled={(option) => {
-                  const originalInvoiceQuantity = invoice?.items.find(origItem => origItem.materialId === option._id)?.quantity || 0;
-                  const availableQuantity = option.quantity + originalInvoiceQuantity;
-                  return availableQuantity === 0;
                 }}
               />
             </Grid>
@@ -614,22 +537,9 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
                 value={itemQuantity}
                 onChange={(e) => setItemQuantity(parseInt(e.target.value) || 1)}
                 inputProps={{ 
-                  min: 1, 
-                  max: selectedMaterial ? (() => {
-                    const originalInvoiceQuantity = invoice?.items.find(origItem => origItem.materialId === selectedMaterial._id)?.quantity || 0;
-                    return selectedMaterial.quantity + originalInvoiceQuantity;
-                  })() : undefined 
+                  min: 1
                 }}
-                helperText={selectedMaterial ? (() => {
-                  const originalInvoiceQuantity = invoice?.items.find(origItem => origItem.materialId === selectedMaterial._id)?.quantity || 0;
-                  const availableQuantity = selectedMaterial.quantity + originalInvoiceQuantity;
-                  return `Tối đa: ${availableQuantity}`;
-                })() : ''}
-                error={selectedMaterial && (() => {
-                  const originalInvoiceQuantity = invoice?.items.find(origItem => origItem.materialId === selectedMaterial._id)?.quantity || 0;
-                  const availableQuantity = selectedMaterial.quantity + originalInvoiceQuantity;
-                  return itemQuantity > availableQuantity;
-                })()}
+                helperText={selectedMaterial ? `Tồn kho hiện tại: ${selectedMaterial.quantity}` : ''}
               />
             </Grid>
 
@@ -667,10 +577,10 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
                     <TableBody>
                       {formData.items.map((item, index) => {
                         const material = materials.find(m => m._id === item.materialId);
-                        const originalInvoiceQuantity = invoice?.items.find(origItem => origItem.materialId === item.materialId)?.quantity || 0;
-                        const availableQuantity = material ? material.quantity + originalInvoiceQuantity : 0;
+                        const availableQuantity = material ? material.quantity : 0;
                         const isLowStock = availableQuantity <= 10;
                         const isOutOfStock = availableQuantity === 0;
+                        const delivered = Number(item.deliveredQuantity || 0);
                         
                         return (
                           <TableRow key={index}>
@@ -688,8 +598,16 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
                                   />
                                   {material && (
                                     <Chip
-                                      label={`Tồn kho khả dụng: ${availableQuantity}`}
+                                      label={`Tồn kho: ${availableQuantity}`}
                                       color={isOutOfStock ? 'error' : isLowStock ? 'warning' : 'success'}
+                                      size="small"
+                                      variant="outlined"
+                                    />
+                                  )}
+                                  {delivered > 0 && (
+                                    <Chip
+                                      label={`Đã giao: ${delivered}`}
+                                      color="info"
                                       size="small"
                                       variant="outlined"
                                     />
@@ -704,13 +622,12 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
                                 onChange={(e) => updateItemQuantity(index, parseInt(e.target.value) || 1)}
                                 inputProps={{ 
                                   min: 1, 
-                                  max: availableQuantity,
                                   style: { textAlign: 'center' } 
                                 }}
                                 size="small"
                                 sx={{ width: 80 }}
-                                error={item.quantity > availableQuantity}
-                                helperText={item.quantity > availableQuantity ? 'Vượt quá tồn kho khả dụng' : ''}
+                                error={item.quantity < delivered}
+                                helperText={item.quantity < delivered ? 'Thấp hơn số đã giao' : ''}
                               />
                             </TableCell>
                             <TableCell align="center">
@@ -722,6 +639,8 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
                             <TableCell align="center">
                               <IconButton
                                 onClick={() => removeItemFromInvoice(index)}
+                                disabled={delivered > 0}
+                                title={delivered > 0 ? 'Không thể xóa mặt hàng đã giao' : 'Xóa mặt hàng'}
                                 color="error"
                                 size="small"
                               >
