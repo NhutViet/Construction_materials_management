@@ -679,6 +679,17 @@ export async function supabaseRequest({ method, path, body, params, isPublic }: 
     }
 
     if (method === 'PATCH' && second && third === 'status') {
+      if (body?.status === 'delivered') {
+        const { data: invoice, error } = await supabase.from('invoices').select('items').eq('_id', second).maybeSingle();
+        if (error) fail(error.message);
+        if (!invoice) fail('Không tìm thấy hóa đơn', 404);
+        const allDelivered = (invoice.items || []).every(
+          (item: any) => num(item.deliveredQuantity) >= num(item.quantity)
+        );
+        if (!allDelivered) {
+          fail('Hóa đơn còn hàng chưa giao. Vui lòng ghi nhận giao đủ trước khi chuyển sang trạng thái Đã giao.', 400);
+        }
+      }
       return check(await supabase.from('invoices').update({ status: body?.status, notes: body?.notes, updatedAt: nowIso() }).eq('_id', second).select().single());
     }
     if (method === 'PATCH' && second && third === 'payment-status') {
