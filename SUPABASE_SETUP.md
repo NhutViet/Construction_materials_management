@@ -13,7 +13,7 @@ Vào **SQL Editor → New query**, dán toàn bộ nội dung `supabase/migratio
 
 Sau đó chạy tiếp `supabase/migrations/0002_delivery_history.sql` để tạo bảng lịch sử giao hàng từng phần (`delivery_records`).
 
-Khi chuyển sang cơ chế **chỉ trừ tồn kho lúc giao hàng**, chạy `supabase/migrations/0003_stock_on_delivery.sql` **ngay sau khi deploy code mới và trước khi tạo hóa đơn mới**. File này cộng lại phần tồn kho đang bị giữ cho các hóa đơn cũ chưa giao; có bảng `app_migrations` nên chạy lại không bị cộng trùng.
+Khi chuyển sang cơ chế **chỉ trừ tồn kho lúc giao hàng**, chạy `supabase/migrations/0003_stock_on_delivery.sql`. File này cộng lại phần tồn kho đang bị giữ cho các hóa đơn cũ chưa giao; hóa đơn tạo bằng code mới được đánh dấu riêng nên không bị cộng nhầm, và chạy lại nhiều lần cũng an toàn.
 
 Migration tạo: `profiles`, `materials`, `invoices`, `stock_in`, `notifications`, `delivery_records`, trigger tự tạo profile khi có user mới, RLS cơ bản cho phép client gọi trực tiếp.
 

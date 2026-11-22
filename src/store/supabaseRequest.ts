@@ -71,6 +71,7 @@ async function buildInvoiceItems(rawItems: any[]) {
       unitPrice,
       totalPrice: round(unitPrice * quantity),
       unit: item.unit || material?.unit || '',
+      stockDeductedAtCreation: false,
       ...(item.deliveredQuantity !== undefined ? { deliveredQuantity: num(item.deliveredQuantity) } : {}),
       ...(item.deliveryStatus ? { deliveryStatus: item.deliveryStatus } : {}),
     };
@@ -599,6 +600,7 @@ export async function supabaseRequest({ method, path, body, params, isPublic }: 
       if (!requested.length) fail('Vui lòng nhập số lượng giao hàng', 400);
 
       const records: any[] = [];
+      const stockAdjustments: any[] = [];
       for (const entry of requested) {
         const index = num(entry.itemIndex);
         const item = items[index];
@@ -634,6 +636,11 @@ export async function supabaseRequest({ method, path, body, params, isPublic }: 
           notes: body?.notes || '',
           createdAt: nowIso(),
         });
+
+        // Hóa đơn cũ đã trừ tồn kho lúc tạo đơn (chưa có dấu false) thì không trừ lại.
+        if (item.stockDeductedAtCreation === false) {
+          stockAdjustments.push({ materialId: item.materialId, quantity });
+        }
       }
 
       const allDelivered = items.every((item: any) => num(item.deliveredQuantity) >= num(item.quantity));
@@ -647,11 +654,8 @@ export async function supabaseRequest({ method, path, body, params, isPublic }: 
       const { error: recordError } = await supabase.from('delivery_records').insert(records);
       if (recordError) fail(recordError.message);
 
-      // Trừ tồn kho theo đúng số lượng thực giao trong đợt này.
-      await adjustMaterialStock(
-        records.map((record) => ({ materialId: record.materialId, quantity: record.quantity })),
-        -1
-      );
+      // Trừ tồn kho theo đúng số lượng thực giao trong đợt này (chỉ với hóa đơn mới).
+      await adjustMaterialStock(stockAdjustments, -1);
 
       return updated;
     }
@@ -740,8 +744,9 @@ export async function supabaseRequest({ method, path, body, params, isPublic }: 
         if (recordError) fail(recordError.message);
       }
 
-      // Điều chỉnh tồn kho theo phần chênh lệch: giao thêm thì trừ, giảm số đã giao thì hoàn lại.
-      if (delta !== 0) {
+      // Điều chỉnh tồn kho theo phần chênh lệch (chỉ với hóa đơn mới).
+      // Hóa đơn cũ đã trừ tồn kho lúc tạo đơn nên bỏ qua để không trừ lần hai.
+      if (delta !== 0 && items[index].stockDeductedAtCreation === false) {
         await adjustMaterialStock(
           [{ materialId: items[index].materialId, quantity: Math.abs(delta) }],
           delta > 0 ? -1 : 1
@@ -761,7 +766,7 @@ export async function supabaseRequest({ method, path, body, params, isPublic }: 
       const items = newItems.map((item, index) => {
         const oldItem =
           oldItems.find((old: any) => old.materialId && old.materialId === item.materialId) ||
-          oldItems[index];
+          (item.materialId ? undefined : oldItems[index]);
         const delivered = num(oldItem?.deliveredQuantity);
         if (delivered > item.quantity) {
           fail(
@@ -769,8 +774,13 @@ export async function supabaseRequest({ method, path, body, params, isPublic }: 
             400
           );
         }
+        // Mặt hàng cũ giữ nguyên dấu "đã trừ tồn kho lúc tạo đơn" (nếu có),
+        // mặt hàng mới thêm thì đánh dấu false để không bị cộng tồn kho sai.
+        const stockMarker = oldItem ? oldItem.stockDeductedAtCreation : false;
+        const { stockDeductedAtCreation: _newStockMarker, ...itemWithoutMarker } = item;
         return {
-          ...item,
+          ...itemWithoutMarker,
+          ...(stockMarker !== undefined ? { stockDeductedAtCreation: stockMarker } : {}),
           deliveredQuantity: delivered,
           deliveryStatus: delivered >= item.quantity ? 'delivered' : delivered > 0 ? 'partial' : 'pending',
           ...(oldItem?.deliveredAt ? { deliveredAt: oldItem.deliveredAt } : {}),

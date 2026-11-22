@@ -3,30 +3,12 @@
 -- Bối cảnh: trước đây adapter Supabase trừ tồn kho ngay khi tạo hóa đơn.
 -- Bây giờ tồn kho chỉ bị trừ khi ghi nhận giao hàng.
 --
--- File này xử lý dữ liệu cũ: cộng lại phần hàng của các hóa đơn CHƯA giao,
--- vì phần đó đã bị trừ sẵn lúc tạo đơn. Chạy đúng MỘT LẦN sau khi deploy code mới.
--- Có bảng app_migrations để chạy lại nhiều lần cũng không bị cộng trùng.
-
-create table if not exists public.app_migrations (
-  id text primary key,
-  "appliedAt" timestamptz not null default now()
-);
-
-alter table public.app_migrations enable row level security;
+-- File này cộng lại phần hàng CHƯA GIAO của các hóa đơn cũ (đã bị trừ sẵn lúc tạo đơn).
+-- Hóa đơn tạo bằng code mới có dấu "stockDeductedAtCreation": false trong từng item
+-- nên sẽ không bị cộng lại. Chạy lại nhiều lần cũng an toàn.
 
 do $$
-declare
-  already_applied boolean;
 begin
-  select exists(
-    select 1 from public.app_migrations where id = '0003_stock_on_delivery'
-  ) into already_applied;
-
-  if already_applied then
-    raise notice 'Migration 0003 đã chạy trước đó, bỏ qua.';
-    return;
-  end if;
-
   with undelivered as (
     select
       (item->>'materialId')::uuid as material_id,
@@ -37,6 +19,7 @@ begin
     from public.invoices i
     cross join lateral jsonb_array_elements(i.items) item
     where coalesce(item->>'materialId', '') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+      and coalesce((item->>'stockDeductedAtCreation')::boolean, true) = true
     group by 1
   )
   update public.materials m
@@ -46,6 +29,24 @@ begin
   where m."_id" = u.material_id
     and u.quantity <> 0;
 
-  insert into public.app_migrations (id) values ('0003_stock_on_delivery');
+  -- Đánh dấu các item cũ đã được xử lý để lần chạy sau không cộng trùng.
+  update public.invoices i
+  set items = (
+    select jsonb_agg(
+      case
+        when coalesce((item->>'stockDeductedAtCreation')::boolean, true)
+          then item || '{"stockDeductedAtCreation": false}'::jsonb
+        else item
+      end
+      order by ordinality
+    )
+    from jsonb_array_elements(i.items) with ordinality as t(item, ordinality)
+  )
+  where exists (
+    select 1
+    from jsonb_array_elements(i.items) item
+    where coalesce((item->>'stockDeductedAtCreation')::boolean, true) = true
+  );
+
   raise notice 'Đã cộng lại tồn kho cho phần chưa giao của các hóa đơn cũ.';
 end $$;
