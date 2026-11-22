@@ -32,6 +32,7 @@ import {
 } from '@mui/icons-material';
 import { AppDispatch, RootState } from '../../../store';
 import { fetchDeliveryLog } from '../../../store/slices/invoiceSlice';
+import { invoiceColor } from '../../../utils/invoiceColor';
 
 const pad = (value: number) => String(value).padStart(2, '0');
 
@@ -314,10 +315,11 @@ const DeliveryLogPage: React.FC = () => {
               {rows.map((batch) => {
                 const key = `${batch.invoiceId}:${batch.batchId}`;
                 const isExpanded = expanded === key;
+                const color = invoiceColor(batch.invoiceId || batch.invoiceNumber);
                 return (
                   <React.Fragment key={key}>
                     <TableRow hover>
-                      <TableCell padding="checkbox">
+                      <TableCell padding="checkbox" sx={{ borderLeft: `4px solid ${color.border}` }}>
                         <IconButton size="small" onClick={() => toggleExpanded(key)}>
                           {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                         </IconButton>
@@ -326,20 +328,27 @@ const DeliveryLogPage: React.FC = () => {
                         {formatDateTime(batch.deliveredAt)}
                       </TableCell>
                       <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontWeight: 700,
-                            color: 'primary.main',
-                            cursor: 'pointer',
-                            '&:hover': { textDecoration: 'underline' },
-                          }}
+                        <Box
+                          component="span"
                           onClick={() =>
                             navigate(`/dashboard/orders/${batch.invoiceId}/deliveries`)
                           }
+                          sx={{
+                            display: 'inline-block',
+                            px: 1,
+                            py: 0.25,
+                            borderRadius: 1,
+                            bgcolor: color.background,
+                            color: color.text,
+                            border: `1px solid ${color.border}`,
+                            fontWeight: 700,
+                            fontSize: '0.8rem',
+                            cursor: 'pointer',
+                            '&:hover': { textDecoration: 'underline' },
+                          }}
                         >
                           {batch.invoiceNumber || '—'}
-                        </Typography>
+                        </Box>
                         {batch.invoiceStatus && (
                           <Chip
                             size="small"

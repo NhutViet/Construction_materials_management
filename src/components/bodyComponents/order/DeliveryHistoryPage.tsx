@@ -32,6 +32,7 @@ import {
   fetchDeliveryHistory,
   fetchInvoiceById,
 } from '../../../store/slices/invoiceSlice';
+import { invoiceColor } from '../../../utils/invoiceColor';
 
 const nowLocalInput = () => {
   const d = new Date();
@@ -108,6 +109,7 @@ const DeliveryHistoryPage: React.FC = () => {
   const headerInvoiceNumber = deliveryHistory?.invoiceNumber || activeInvoice?.invoiceNumber || '';
   const headerCustomerName = deliveryHistory?.customerName || activeInvoice?.customerName || '';
   const headerCustomerPhone = deliveryHistory?.customerPhone || activeInvoice?.customerPhone || '';
+  const headerColor = invoiceColor(deliveryHistory?.invoiceId || activeInvoice?._id || headerInvoiceNumber);
 
   const deliveryChip = (() => {
     if (!activeInvoice) return null;
@@ -196,7 +198,26 @@ const DeliveryHistoryPage: React.FC = () => {
             Giao hàng & lịch sử giao hàng
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {headerInvoiceNumber || '—'}
+            {headerInvoiceNumber ? (
+              <Box
+                component="span"
+                sx={{
+                  display: 'inline-block',
+                  px: 0.75,
+                  py: 0.1,
+                  mr: 0.5,
+                  borderRadius: 1,
+                  bgcolor: headerColor.background,
+                  color: headerColor.text,
+                  border: `1px solid ${headerColor.border}`,
+                  fontWeight: 700,
+                }}
+              >
+                {headerInvoiceNumber}
+              </Box>
+            ) : (
+              '—'
+            )}
             {headerCustomerName ? ` · ${headerCustomerName}` : ''}
             {headerCustomerPhone ? ` · ${headerCustomerPhone}` : ''}
           </Typography>
