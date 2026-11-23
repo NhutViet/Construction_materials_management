@@ -20,6 +20,7 @@ import {
   TrendingUpOutlined,
   PeopleAltOutlined,
   AnalyticsOutlined,
+  LocalShippingOutlined,
 } from "@mui/icons-material";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -60,6 +61,11 @@ const SideBarComponent: React.FC<SideBarComponentProps> = ({ onItemClick }) => {
       title: "Đơn hàng",
       path: "orders",
       component: <CardTravelOutlined fontSize="medium" color="primary" />,
+    },
+    {
+      title: "Lịch sử giao hàng",
+      path: "deliveries",
+      component: <LocalShippingOutlined fontSize="medium" color="primary" />,
     },
     {
       title: "Nhập hàng",

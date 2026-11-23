@@ -173,6 +173,131 @@ export interface DeliveredAmount {
   };
 }
 
+export interface DeliveryHistoryItem {
+  itemIndex: number;
+  materialId: string;
+  materialName: string;
+  unit: string;
+  unitPrice: number;
+  orderedQuantity: number;
+  deliveredQuantity: number;
+  remainingQuantity: number;
+  deliveryStatus: 'pending' | 'partial' | 'delivered';
+}
+
+export interface DeliveryRecord {
+  _id: string;
+  invoiceId: string;
+  invoiceNumber: string;
+  batchId: string;
+  itemIndex: number;
+  materialId?: string;
+  materialName: string;
+  unit: string;
+  quantity: number;
+  deliveredAt: string;
+  deliveredBy?: string;
+  deliveredByName?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface DeliveryBatch {
+  batchId: string;
+  deliveredAt: string;
+  deliveredBy?: string;
+  deliveredByName?: string;
+  notes?: string;
+  totalQuantity: number;
+  items: {
+    recordId: string;
+    itemIndex: number;
+    materialId?: string;
+    materialName: string;
+    unit: string;
+    quantity: number;
+  }[];
+}
+
+export interface DeliveryHistory {
+  invoiceId: string;
+  invoiceNumber: string;
+  customerName: string;
+  customerPhone?: string;
+  customerAddress?: string;
+  invoiceStatus: string;
+  items: DeliveryHistoryItem[];
+  records: DeliveryRecord[];
+  batches: DeliveryBatch[];
+  summary: {
+    totalItems: number;
+    totalQuantity: number;
+    deliveredQuantity: number;
+    remainingQuantity: number;
+    totalBatches: number;
+    lastDeliveredAt: string;
+  };
+}
+
+export interface CreateDeliveryDto {
+  items: { itemIndex: number; quantity: number }[];
+  notes?: string;
+  deliveredAt?: string;
+}
+
+export interface DeliveryLogItem {
+  recordId: string;
+  itemIndex: number;
+  materialId?: string;
+  materialName: string;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface DeliveryLogBatch {
+  batchId: string;
+  invoiceId: string;
+  invoiceNumber: string;
+  customerName: string;
+  customerPhone?: string;
+  customerAddress?: string;
+  invoiceStatus: string;
+  deliveredAt: string;
+  deliveredBy?: string;
+  deliveredByName?: string;
+  notes?: string;
+  totalQuantity: number;
+  deliveredValue: number;
+  itemCount: number;
+  items: DeliveryLogItem[];
+}
+
+export interface DeliveryLogSummary {
+  totalBatches: number;
+  totalQuantity: number;
+  totalInvoices: number;
+  totalRecords: number;
+  deliveredValue: number;
+}
+
+export interface DeliveryLog {
+  deliveries: DeliveryLogBatch[];
+  total: number;
+  page: number;
+  limit: number;
+  summary: DeliveryLogSummary;
+}
+
+export interface DeliveryLogQuery {
+  search?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  limit?: number;
+  invoiceId?: string;
+}
+
 export interface InvoiceQueryDto {
   status?: string;
   paymentStatus?: string;
@@ -225,6 +350,12 @@ export interface InvoiceState {
   statistics: InvoiceStatistics | null;
   paymentMethods: PaymentMethodOption[];
   deliveryStatus: DeliveryStatus | null;
+  deliveryHistory: DeliveryHistory | null;
+  deliveryHistoryLoading: boolean;
+  deliverySaving: boolean;
+  deliveryLog: DeliveryLog | null;
+  deliveryLogLoading: boolean;
+  deliveryLogError: string | null;
   deliveredAmount: DeliveredAmount | null;
   deliveredAmountLoading: boolean;
   publicSearchResults: Invoice[]; // Store public search results
@@ -249,6 +380,12 @@ const initialState: InvoiceState = {
   statistics: null,
   paymentMethods: [],
   deliveryStatus: null,
+  deliveryHistory: null,
+  deliveryHistoryLoading: false,
+  deliverySaving: false,
+  deliveryLog: null,
+  deliveryLogLoading: false,
+  deliveryLogError: null,
   deliveredAmount: null,
   deliveredAmountLoading: false,
   publicSearchResults: [],
@@ -489,6 +626,49 @@ export const fetchDeliveryStatus = createAsyncThunk(
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch delivery status');
+    }
+  }
+);
+
+export const fetchDeliveryHistory = createAsyncThunk(
+  'invoice/fetchDeliveryHistory',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const response = await AxiosInstance().get(`/invoices/${id}/delivery-history`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch delivery history');
+    }
+  }
+);
+
+export const createDelivery = createAsyncThunk(
+  'invoice/createDelivery',
+  async ({ id, data }: { id: string; data: CreateDeliveryDto }, { rejectWithValue }) => {
+    try {
+      const response = await AxiosInstance().post(`/invoices/${id}/deliveries`, data);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to create delivery');
+    }
+  }
+);
+
+export const fetchDeliveryLog = createAsyncThunk(
+  'invoice/fetchDeliveryLog',
+  async (query: DeliveryLogQuery, { rejectWithValue }) => {
+    try {
+      const params: Record<string, string | number> = {};
+      if (query.search) params.search = query.search;
+      if (query.from) params.from = query.from;
+      if (query.to) params.to = query.to;
+      if (query.invoiceId) params.invoiceId = query.invoiceId;
+      params.page = query.page || 1;
+      params.limit = query.limit || 20;
+      const response = await AxiosInstance().get('/deliveries', { params });
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch delivery log');
     }
   }
 );
@@ -999,6 +1179,57 @@ const invoiceSlice = createSlice({
       })
       .addCase(fetchDeliveryStatus.rejected, (state, action) => {
         state.isLoading = false;
+        state.error = action.payload as string;
+      });
+
+    // Fetch delivery history
+    builder
+      .addCase(fetchDeliveryHistory.pending, (state) => {
+        state.deliveryHistoryLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchDeliveryHistory.fulfilled, (state, action: PayloadAction<DeliveryHistory>) => {
+        state.deliveryHistoryLoading = false;
+        state.deliveryHistory = action.payload;
+      })
+      .addCase(fetchDeliveryHistory.rejected, (state, action) => {
+        state.deliveryHistoryLoading = false;
+        state.error = action.payload as string;
+      });
+
+    // Fetch all delivery history
+    builder
+      .addCase(fetchDeliveryLog.pending, (state) => {
+        state.deliveryLogLoading = true;
+        state.deliveryLogError = null;
+      })
+      .addCase(fetchDeliveryLog.fulfilled, (state, action: PayloadAction<DeliveryLog>) => {
+        state.deliveryLogLoading = false;
+        state.deliveryLog = action.payload;
+      })
+      .addCase(fetchDeliveryLog.rejected, (state, action) => {
+        state.deliveryLogLoading = false;
+        state.deliveryLogError = action.payload as string;
+      });
+
+    // Create partial delivery
+    builder
+      .addCase(createDelivery.pending, (state) => {
+        state.deliverySaving = true;
+        state.error = null;
+      })
+      .addCase(createDelivery.fulfilled, (state, action: PayloadAction<Invoice>) => {
+        state.deliverySaving = false;
+        const index = state.invoices.findIndex(inv => inv._id === action.payload._id);
+        const allIndex = state.allInvoices.findIndex(inv => inv._id === action.payload._id);
+        if (index !== -1) state.invoices[index] = action.payload;
+        if (allIndex !== -1) state.allInvoices[allIndex] = action.payload;
+        if (state.selectedInvoice?._id === action.payload._id) {
+          state.selectedInvoice = action.payload;
+        }
+      })
+      .addCase(createDelivery.rejected, (state, action) => {
+        state.deliverySaving = false;
         state.error = action.payload as string;
       });
 

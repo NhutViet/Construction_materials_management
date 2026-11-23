@@ -1,4 +1,4 @@
-import { Edit, Payment, QrCode as QrCodeIcon, LocalShipping, CheckCircle, Edit as EditIcon } from "@mui/icons-material";
+import { Edit, Payment, QrCode as QrCodeIcon, LocalShipping, Edit as EditIcon, History as HistoryIcon } from "@mui/icons-material";
 import {
   Box,
   Button,
@@ -16,18 +16,15 @@ import {
   FormControl,
   Chip,
   Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
   IconButton,
 } from "@mui/material";
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { RootState, AppDispatch } from "../../../store";
 import { fetchMaterialById, fetchMaterials, Material } from "../../../store/slices/materialSlice";
-import { Invoice, InvoiceItem, updateInvoiceStatus, updateItemDelivery, fetchInvoiceById, fetchDeliveredAmount } from "../../../store/slices/invoiceSlice";
+import { Invoice, InvoiceItem, updateInvoiceStatus, fetchInvoiceById, fetchDeliveredAmount } from "../../../store/slices/invoiceSlice";
+import DeliveryModal from "./DeliveryModal";
 import EditInvoiceModal from "./EditInvoiceModal";
 import PaymentModal from "./PaymentModal";
 import VietQRModal from "./VietQRModal";
@@ -40,19 +37,16 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
   const { selectedMaterial, isLoading: materialLoading, materials } = useSelector((state: RootState) => state.materials);
   const { selectedInvoice, deliveredAmount, deliveredAmountLoading } = useSelector((state: RootState) => state.invoice);
   const alertModal = useAlertModal();
+  const navigate = useNavigate();
   const [materialDetails, setMaterialDetails] = useState<Record<string, any>>({});
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [vietQRModalOpen, setVietQRModalOpen] = useState(false);
   const [itemDeliveryStatus, setItemDeliveryStatus] = useState<Record<number, 'pending' | 'partial' | 'delivered'>>({});
   const [itemDeliveredQuantity, setItemDeliveredQuantity] = useState<Record<number, number>>({});
-  const [quantityModalOpen, setQuantityModalOpen] = useState(false);
-  const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
-  const [quantityInput, setQuantityInput] = useState<string>('');
-  const [statusModalOpen, setStatusModalOpen] = useState(false);
-  const [selectedItemForStatus, setSelectedItemForStatus] = useState<number | null>(null);
-  const [showQuantityInput, setShowQuantityInput] = useState<Record<number, boolean>>({});
-  const [tempQuantityInput, setTempQuantityInput] = useState<Record<number, string>>({});
+  const [deliveryModalOpen, setDeliveryModalOpen] = useState(false);
+  const [deliveryMode, setDeliveryMode] = useState<'partial' | 'all'>('partial');
+  const [deliveryItemIndex, setDeliveryItemIndex] = useState<number | null>(null);
 
   const getStatusText = (status: string) => {
     switch (status) {
@@ -253,175 +247,28 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
     }
   };
 
-  const handlePartialDeliveryClick = (itemIndex: number) => {
-    setSelectedItemIndex(itemIndex);
-    setQuantityInput('0');
-    setQuantityModalOpen(true);
+  const openDeliveryModal = (mode: 'partial' | 'all', itemIndex: number | null = null) => {
+    setDeliveryMode(mode);
+    setDeliveryItemIndex(itemIndex);
+    setDeliveryModalOpen(true);
   };
 
-  const handleQuantityModalClose = () => {
-    setQuantityModalOpen(false);
-    setSelectedItemIndex(null);
-    setQuantityInput('');
+  const handleDeliveryModalClose = () => {
+    setDeliveryModalOpen(false);
+    setDeliveryItemIndex(null);
   };
 
-  const handleStatusIconClick = (itemIndex: number) => {
-    setSelectedItemForStatus(itemIndex);
-    setStatusModalOpen(true);
-  };
-
-  const handleStatusModalClose = () => {
-    setStatusModalOpen(false);
-    setSelectedItemForStatus(null);
-    setShowQuantityInput({});
-    setTempQuantityInput({});
-  };
-
-  const handleStatusSelect = (status: 'pending' | 'partial' | 'delivered') => {
-    if (selectedItemForStatus === null) return;
-
-    if (status === 'partial') {
-      // Check if we have any inventory available for partial delivery
-      const currentDelivered = itemDeliveredQuantity[selectedItemForStatus] || 0;
-      const totalQuantity = currentOrder?.items[selectedItemForStatus].quantity || 0;
-      const remainingQuantity = totalQuantity - currentDelivered;
-      
-      if (remainingQuantity <= 0) {
-        alertModal.showWarning(
-          'Sản phẩm này đã được giao đủ số lượng',
-          'Cảnh báo',
-          {
-            maxWidth: 'sm',
-            showCloseButton: true,
-            autoClose: false
-          }
-        );
-        return;
-      }
-
-      // Check if we have any inventory available
-      const inventoryCheck = checkInventoryAvailability(selectedItemForStatus, totalQuantity);
-      if (!inventoryCheck.available) {
-        alertModal.showWarning(
-          inventoryCheck.message || 'Không đủ tồn kho',
-          'Cảnh báo tồn kho',
-          {
-            maxWidth: 'md',
-            showCloseButton: true,
-            autoClose: false
-          }
-        );
-        return;
-      }
-
-      // Show quantity input for partial delivery
-      setShowQuantityInput(prev => ({
-        ...prev,
-        [selectedItemForStatus]: true
-      }));
-      setTempQuantityInput(prev => ({
-        ...prev,
-        [selectedItemForStatus]: '0'
-      }));
-    } else {
-      // Direct status change for pending or delivered
-      handleDeliveryStatusChange(selectedItemForStatus, status);
-      handleStatusModalClose();
+  const handleDeliverySuccess = async () => {
+    setDeliveryModalOpen(false);
+    setDeliveryItemIndex(null);
+    if (!currentOrder) return;
+    try {
+      await dispatch(fetchInvoiceById(currentOrder._id)).unwrap();
+      await dispatch(fetchDeliveredAmount(currentOrder._id)).unwrap();
+    } catch (refreshError) {
+      console.warn('Không thể refresh dữ liệu hóa đơn:', refreshError);
     }
-  };
-
-  const handleQuantityInputChange = (itemIndex: number, value: string) => {
-    setTempQuantityInput(prev => ({
-      ...prev,
-      [itemIndex]: value
-    }));
-  };
-
-  const handleQuantityInputSubmit = async (itemIndex: number) => {
-    const quantity = parseInt(tempQuantityInput[itemIndex] || '0');
-    const maxQuantity = currentOrder?.items[itemIndex].quantity || 0;
-
-    if (isNaN(quantity) || quantity < 0) {
-      alertModal.showError('Vui lòng nhập số lượng hợp lệ (>= 0)', 'Lỗi nhập liệu');
-      return;
-    }
-
-    if (quantity > maxQuantity) {
-      alertModal.showError(`Số lượng không được vượt quá ${maxQuantity}`, 'Lỗi nhập liệu');
-      return;
-    }
-
-    // Check inventory availability before proceeding
-    if (quantity > 0) {
-      const inventoryCheck = checkInventoryAvailability(itemIndex, quantity);
-      if (!inventoryCheck.available) {
-        alertModal.showWarning(
-          inventoryCheck.message || 'Không đủ tồn kho',
-          'Cảnh báo tồn kho',
-          {
-            maxWidth: 'md',
-            showCloseButton: true,
-            autoClose: false
-          }
-        );
-        return;
-      }
-    }
-
-    // Update the quantity and status
-    await handleDeliveredQuantityChange(itemIndex, quantity);
-    
-    // Close modal and reset states
-    handleStatusModalClose();
-  };
-
-  const handleQuantityInputCancel = (itemIndex: number) => {
-    setShowQuantityInput(prev => ({
-      ...prev,
-      [itemIndex]: false
-    }));
-    setTempQuantityInput(prev => ({
-      ...prev,
-      [itemIndex]: ''
-    }));
-  };
-
-  const handleQuantitySubmit = async () => {
-    if (selectedItemIndex === null || !currentOrder) return;
-
-    const quantity = parseInt(quantityInput);
-    const maxQuantity = currentOrder.items[selectedItemIndex].quantity;
-
-    if (isNaN(quantity) || quantity < 0) {
-      alertModal.showError('Vui lòng nhập số lượng hợp lệ (>= 0)', 'Lỗi nhập liệu');
-      return;
-    }
-
-    if (quantity > maxQuantity) {
-      alertModal.showError(`Số lượng không được vượt quá ${maxQuantity}`, 'Lỗi nhập liệu');
-      return;
-    }
-
-    // Check inventory availability before proceeding
-    if (quantity > 0) {
-      const inventoryCheck = checkInventoryAvailability(selectedItemIndex, quantity);
-      if (!inventoryCheck.available) {
-        alertModal.showWarning(
-          inventoryCheck.message || 'Không đủ tồn kho',
-          'Cảnh báo tồn kho',
-          {
-            maxWidth: 'md',
-            showCloseButton: true,
-            autoClose: false
-          }
-        );
-        return;
-      }
-    }
-
-    // Update the quantity and status
-    await handleDeliveredQuantityChange(selectedItemIndex, quantity);
-    handleQuantityModalClose();
+    alertModal.showSuccess('Đã ghi nhận giao hàng.', 'Thành công');
   };
 
   const getDeliveryStatusText = (status: string) => {
@@ -477,248 +324,6 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
       return 'confirmed'; // Partially delivered
     } else {
       return 'pending';
-    }
-  };
-
-  const handleDeliveryStatusChange = async (itemIndex: number, newStatus: 'pending' | 'partial' | 'delivered') => {
-    if (!currentOrder) return;
-
-    // Prevent changes if order is already delivered
-    if ((currentOrder.status as string) === 'delivered') {
-      console.log('Không thể thay đổi trạng thái giao hàng khi đơn hàng đã giao');
-      return;
-    }
-
-    // Store previous state for potential rollback
-    const previousDeliveryStatus = itemDeliveryStatus[itemIndex];
-    const previousDeliveredQuantity = itemDeliveredQuantity[itemIndex];
-
-    try {
-      let deliveredQuantity: number;
-      
-      if (newStatus === 'delivered') {
-        // Khi chọn "Đã giao", set số lượng đã giao = tổng số lượng
-        deliveredQuantity = currentOrder.items[itemIndex].quantity;
-      } else if (newStatus === 'partial') {
-        // Khi chọn "Giao một phần", giữ nguyên số lượng đã giao hiện tại
-        deliveredQuantity = itemDeliveredQuantity[itemIndex] || 0;
-      } else {
-        // Khi chọn "Chờ giao", set số lượng đã giao = 0
-        deliveredQuantity = 0;
-      }
-
-      // Kiểm tra xem có phải backend đang hiểu deliveredQuantity là số lượng giao thêm không
-      // Nếu có, thì cần tính toán lại
-      const currentDelivered = itemDeliveredQuantity[itemIndex] || 0;
-      const totalQuantity = currentOrder.items[itemIndex].quantity;
-      
-      // Nếu backend hiểu deliveredQuantity là số lượng giao thêm
-      // thì khi chọn "Đã giao", cần gửi số lượng còn lại cần giao
-      if (newStatus === 'delivered' && currentDelivered > 0) {
-        const remainingToDeliver = totalQuantity - currentDelivered;
-        console.log(`Backend có thể hiểu deliveredQuantity là số lượng giao thêm. Số lượng còn lại cần giao: ${remainingToDeliver}`);
-        // Thử gửi số lượng còn lại thay vì tổng số lượng
-        deliveredQuantity = remainingToDeliver;
-      }
-
-      // Check inventory availability before proceeding
-      if (newStatus === 'delivered' || newStatus === 'partial') {
-        const inventoryCheck = checkInventoryAvailability(itemIndex, deliveredQuantity);
-        if (!inventoryCheck.available) {
-          alertModal.showWarning(
-            inventoryCheck.message || 'Không đủ tồn kho',
-            'Cảnh báo tồn kho',
-            {
-              maxWidth: 'md',
-              showCloseButton: true,
-              autoClose: false
-            }
-          );
-          return;
-        }
-      }
-
-      // Debug log để kiểm tra
-      console.log(`Item ${itemIndex}:`, {
-        currentDelivered: itemDeliveredQuantity[itemIndex] || 0,
-        totalQuantity: currentOrder.items[itemIndex].quantity,
-        newStatus,
-        deliveredQuantity,
-        remainingToDeliver: currentOrder.items[itemIndex].quantity - (itemDeliveredQuantity[itemIndex] || 0)
-      });
-
-      // Update local state first
-      const newDeliveryStatuses = {
-        ...itemDeliveryStatus,
-        [itemIndex]: newStatus
-      };
-      
-      const newDeliveredQuantities = {
-        ...itemDeliveredQuantity,
-        [itemIndex]: deliveredQuantity
-      };
-
-      setItemDeliveryStatus(newDeliveryStatuses);
-      setItemDeliveredQuantity(newDeliveredQuantities);
-
-      // Calculate new overall invoice status
-      const newInvoiceStatus = calculateInvoiceStatus(currentOrder.items, newDeliveryStatuses);
-      
-      // Update item delivery
-      await dispatch(updateItemDelivery({
-        id: currentOrder._id,
-        itemIndex,
-        data: { 
-          deliveredQuantity,
-          notes: `Cập nhật trạng thái giao hàng: ${getDeliveryStatusText(newStatus)}`
-        }
-      })).unwrap();
-
-      // Update overall invoice status if it has changed and invoice is not completed/cancelled
-      if (newInvoiceStatus !== currentOrder.status && 
-          (currentOrder.status as string) !== 'delivered' && 
-          (currentOrder.status as string) !== 'cancelled') {
-        try {
-          await dispatch(updateInvoiceStatus({
-            id: currentOrder._id,
-            data: { status: newInvoiceStatus }
-          })).unwrap();
-          console.log(`Đã cập nhật trạng thái hóa đơn thành: ${getStatusText(newInvoiceStatus)}`);
-        } catch (statusError) {
-          console.warn('Không thể cập nhật trạng thái hóa đơn:', statusError);
-          // Continue execution even if status update fails
-        }
-      }
-
-      // Refresh the invoice data to get updated delivery status from database
-      try {
-        await dispatch(fetchInvoiceById(currentOrder._id)).unwrap();
-        // Also refresh delivered amount
-        await dispatch(fetchDeliveredAmount(currentOrder._id)).unwrap();
-      } catch (refreshError) {
-        console.warn('Không thể refresh dữ liệu hóa đơn:', refreshError);
-        // Continue execution even if refresh fails
-      }
-
-      console.log(`Đã cập nhật trạng thái giao hàng item ${itemIndex} thành: ${getDeliveryStatusText(newStatus)}`);
-    } catch (error) {
-      console.error('Lỗi khi cập nhật trạng thái giao hàng:', error);
-      // Revert local state changes on error
-      setItemDeliveryStatus(prev => ({
-        ...prev,
-        [itemIndex]: previousDeliveryStatus // Revert to previous status
-      }));
-      setItemDeliveredQuantity(prev => ({
-        ...prev,
-        [itemIndex]: previousDeliveredQuantity // Revert to previous quantity
-      }));
-    }
-  };
-
-  const handleDeliveredQuantityChange = async (itemIndex: number, quantity: number) => {
-    // Prevent changes if order is already delivered
-    if (currentOrder && (currentOrder.status as string) === 'delivered') {
-      return;
-    }
-
-    // Store previous state for potential rollback
-    const previousDeliveredQuantity = itemDeliveredQuantity[itemIndex];
-
-    try {
-      // Validate quantity
-      const maxQuantity = currentOrder.items[itemIndex].quantity;
-      if (quantity < 0 || quantity > maxQuantity) {
-        console.error(`Số lượng phải từ 0 đến ${maxQuantity}`);
-        return;
-      }
-
-      // Check inventory availability before proceeding
-      if (quantity > 0) {
-        const inventoryCheck = checkInventoryAvailability(itemIndex, quantity);
-        if (!inventoryCheck.available) {
-          alertModal.showWarning(
-            inventoryCheck.message || 'Không đủ tồn kho',
-            'Cảnh báo tồn kho',
-            {
-              maxWidth: 'md',
-              showCloseButton: true,
-              autoClose: false
-            }
-          );
-          return;
-        }
-      }
-
-      // Update local state first
-      setItemDeliveredQuantity(prev => ({
-        ...prev,
-        [itemIndex]: quantity
-      }));
-
-      // Determine new delivery status based on quantity
-      let newDeliveryStatus: 'pending' | 'partial' | 'delivered' = 'pending';
-      if (quantity === 0) {
-        newDeliveryStatus = 'pending';
-      } else if (quantity >= maxQuantity) {
-        newDeliveryStatus = 'delivered';
-      } else {
-        newDeliveryStatus = 'partial';
-      }
-
-      // Always update delivery status based on quantity
-      setItemDeliveryStatus(prev => ({
-        ...prev,
-        [itemIndex]: newDeliveryStatus
-      }));
-
-      // Update item delivery in backend
-      await dispatch(updateItemDelivery({
-        id: currentOrder._id,
-        itemIndex,
-        data: { 
-          deliveredQuantity: quantity,
-          notes: `Cập nhật số lượng đã giao: ${quantity}/${currentOrder.items[itemIndex].quantity}`
-        }
-      })).unwrap();
-
-      // Calculate new overall invoice status
-      const newDeliveryStatuses = {
-        ...itemDeliveryStatus,
-        [itemIndex]: newDeliveryStatus
-      };
-      const newInvoiceStatus = calculateInvoiceStatus(currentOrder.items, newDeliveryStatuses);
-      
-      // Update overall invoice status if it has changed
-      if (newInvoiceStatus !== currentOrder.status && 
-          (currentOrder.status as string) !== 'delivered' && 
-          (currentOrder.status as string) !== 'cancelled') {
-        try {
-          await dispatch(updateInvoiceStatus({
-            id: currentOrder._id,
-            data: { status: newInvoiceStatus }
-          })).unwrap();
-          console.log(`Đã cập nhật trạng thái hóa đơn thành: ${getStatusText(newInvoiceStatus)}`);
-        } catch (statusError) {
-          console.warn('Không thể cập nhật trạng thái hóa đơn:', statusError);
-        }
-      }
-
-      // Refresh the invoice data
-      try {
-        await dispatch(fetchInvoiceById(currentOrder._id)).unwrap();
-        // Also refresh delivered amount
-        await dispatch(fetchDeliveredAmount(currentOrder._id)).unwrap();
-      } catch (refreshError) {
-        console.warn('Không thể refresh dữ liệu hóa đơn:', refreshError);
-      }
-
-    } catch (error) {
-      console.error('Lỗi khi cập nhật số lượng đã giao:', error);
-      // Revert local state changes on error
-      setItemDeliveredQuantity(prev => ({
-        ...prev,
-        [itemIndex]: previousDeliveredQuantity
-      }));
     }
   };
 
@@ -872,25 +477,34 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
           minWidth: "80px",
           textAlign: "center"
         }}>
-          <Tooltip title="Thao tác trạng thái">
-            <IconButton
-              size="small"
-              onClick={() => handleStatusIconClick(index)}
-              disabled={(currentOrder.status as string) === 'delivered'}
-              sx={{ 
-                p: 0.5,
-                '&:hover': {
-                  backgroundColor: 'action.hover'
-                }
-              }}
-            >
-              <EditIcon sx={{ fontSize: '1.2rem' }} />
-            </IconButton>
+          <Tooltip title="Ghi nhận giao hàng cho mặt hàng này">
+            <span>
+              <IconButton
+                size="small"
+                onClick={() => openDeliveryModal('partial', index)}
+                disabled={currentOrder.status === 'cancelled' || currentDeliveredQuantity >= item.quantity}
+                sx={{ 
+                  p: 0.5,
+                  '&:hover': {
+                    backgroundColor: 'action.hover'
+                  }
+                }}
+              >
+                <EditIcon sx={{ fontSize: '1.2rem' }} />
+              </IconButton>
+            </span>
           </Tooltip>
         </TableCell>
       </TableRow>
     );
   });
+
+  const totalRemaining = items.reduce(
+    (acc: number, item: InvoiceItem) =>
+      acc + Math.max(0, Number(item.quantity || 0) - Number(item.deliveredQuantity || 0)),
+    0
+  );
+
   return (
     <Box
       sx={{
@@ -930,6 +544,22 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
             width: { xs: "100%", sm: "auto" },
             justifyContent: { xs: "center", sm: "flex-end" }
           }}>
+            {currentOrder.status !== 'cancelled' && (
+              <Button
+                variant="contained"
+                startIcon={<HistoryIcon />}
+                onClick={() => navigate(`/dashboard/orders/${currentOrder._id}/deliveries`)}
+                size="small"
+                sx={{
+                  fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                  px: { xs: 1, sm: 2 },
+                  py: { xs: 0.5, sm: 1 },
+                }}
+              >
+                <Box sx={{ display: { xs: "none", sm: "inline" } }}>Giao hàng / Lịch sử</Box>
+                <Box sx={{ display: { xs: "inline", sm: "none" } }}>Giao</Box>
+              </Button>
+            )}
             {currentOrder.paymentStatus !== 'paid' && currentOrder.status !== 'cancelled' && (
               <>
                 <Button
@@ -1395,10 +1025,10 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
                 fontSize: { xs: "0.75rem", sm: "0.875rem" },
                 "&:hover": { bgcolor: "#1976d2" }
               }}
-              onClick={() => handleStatusChange('confirmed')}
-              disabled={currentOrder.status === 'confirmed' || currentOrder.status === 'cancelled' || currentOrder.status === 'delivered'}
+              onClick={() => openDeliveryModal('partial')}
+              disabled={currentOrder.status === 'cancelled' || totalRemaining <= 0}
             >
-              <Box sx={{ display: { xs: "none", sm: "inline" } }}>Đã giao một phần</Box>
+              <Box sx={{ display: { xs: "none", sm: "inline" } }}>Giao một phần</Box>
               <Box sx={{ display: { xs: "inline", sm: "none" } }}>Một phần</Box>
             </Button>
             <Button
@@ -1412,11 +1042,11 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
                 fontSize: { xs: "0.75rem", sm: "0.875rem" },
                 "&:hover": { bgcolor: "#388e3c" }
               }}
-              onClick={() => handleStatusChange('delivered')}
-              disabled={currentOrder.status === 'delivered' || currentOrder.status === 'cancelled'}
+              onClick={() => openDeliveryModal('all')}
+              disabled={currentOrder.status === 'cancelled' || totalRemaining <= 0}
             >
-              <Box sx={{ display: { xs: "none", sm: "inline" } }}>Đã giao</Box>
-              <Box sx={{ display: { xs: "inline", sm: "none" } }}>Giao</Box>
+              <Box sx={{ display: { xs: "none", sm: "inline" } }}>Đã giao hết</Box>
+              <Box sx={{ display: { xs: "inline", sm: "none" } }}>Giao hết</Box>
             </Button>
             {currentOrder.paymentStatus !== 'paid' && (
               <Button
@@ -1468,154 +1098,15 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
         onSuccess={handleVietQRSuccess}
       />
 
-      {/* Status Selection Modal */}
-      <Dialog
-        open={statusModalOpen}
-        onClose={handleStatusModalClose}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          Chọn trạng thái giao hàng
-        </DialogTitle>
-        <DialogContent>
-          {selectedItemForStatus !== null && currentOrder && (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Vật liệu: {materialDetails[currentOrder.items[selectedItemForStatus].materialId]?.name || currentOrder.items[selectedItemForStatus].materialName || 'N/A'}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Tổng số lượng: {currentOrder.items[selectedItemForStatus].quantity} {currentOrder.items[selectedItemForStatus].unit}
-              </Typography>
-              
-              {/* Quantity Input for Partial Delivery */}
-              {showQuantityInput[selectedItemForStatus] && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                    Nhập số lượng đã giao:
-                  </Typography>
-                  <TextField
-                    autoFocus
-                    margin="dense"
-                    label="Số lượng đã giao"
-                    type="number"
-                    fullWidth
-                    variant="outlined"
-                    value={tempQuantityInput[selectedItemForStatus] || ''}
-                    onChange={(e) => handleQuantityInputChange(selectedItemForStatus, e.target.value)}
-                    inputProps={{
-                      min: 0,
-                      max: currentOrder.items[selectedItemForStatus].quantity
-                    }}
-                    helperText={`Nhập số lượng từ 0 đến ${currentOrder.items[selectedItemForStatus].quantity}`}
-                  />
-                </Box>
-              )}
-              
-              {/* Status Buttons */}
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                
-                <Button
-                  variant="outlined"
-                  color="info"
-                  startIcon={<Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: 'info.main' }} />}
-                  onClick={() => handleStatusSelect('partial')}
-                  sx={{ 
-                    justifyContent: 'flex-start',
-                    py: 1.5,
-                    fontSize: '1rem'
-                  }}
-                >
-                  Giao một phần
-                </Button>
-                
-                <Button
-                  variant="outlined"
-                  color="success"
-                  startIcon={<CheckCircle sx={{ fontSize: '1.2rem' }} />}
-                  onClick={() => handleStatusSelect('delivered')}
-                  sx={{ 
-                    justifyContent: 'flex-start',
-                    py: 1.5,
-                    fontSize: '1rem'
-                  }}
-                >
-                  Đã giao
-                </Button>
-              </Box>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleStatusModalClose} color="secondary">
-            Hủy
-          </Button>
-          {showQuantityInput[selectedItemForStatus || 0] && (
-            <>
-              <Button 
-                onClick={() => handleQuantityInputCancel(selectedItemForStatus || 0)} 
-                color="secondary"
-              >
-                Hủy nhập
-              </Button>
-              <Button 
-                onClick={() => handleQuantityInputSubmit(selectedItemForStatus || 0)} 
-                variant="contained" 
-                color="primary"
-              >
-                Xác nhận
-              </Button>
-            </>
-          )}
-        </DialogActions>
-      </Dialog>
-
-      {/* Quantity Input Modal */}
-      <Dialog
-        open={quantityModalOpen}
-        onClose={handleQuantityModalClose}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          Nhập số lượng đã giao
-        </DialogTitle>
-        <DialogContent>
-          {selectedItemIndex !== null && currentOrder && (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                Vật liệu: {materialDetails[currentOrder.items[selectedItemIndex].materialId]?.name || currentOrder.items[selectedItemIndex].materialName || 'N/A'}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Tổng số lượng: {currentOrder.items[selectedItemIndex].quantity} {currentOrder.items[selectedItemIndex].unit}
-              </Typography>
-              <TextField
-                autoFocus
-                margin="dense"
-                label="Số lượng đã giao"
-                type="number"
-                fullWidth
-                variant="outlined"
-                value={quantityInput}
-                onChange={(e) => setQuantityInput(e.target.value)}
-                inputProps={{
-                  min: 0,
-                  max: currentOrder.items[selectedItemIndex].quantity
-                }}
-                helperText={`Nhập số lượng từ 0 đến ${currentOrder.items[selectedItemIndex].quantity}`}
-              />
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleQuantityModalClose} color="secondary">
-            Hủy
-          </Button>
-          <Button onClick={handleQuantitySubmit} variant="contained" color="primary">
-            Xác nhận
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Delivery Modal */}
+      <DeliveryModal
+        invoice={currentOrder}
+        open={deliveryModalOpen}
+        mode={deliveryMode}
+        initialItemIndex={deliveryItemIndex}
+        onClose={handleDeliveryModalClose}
+        onSuccess={handleDeliverySuccess}
+      />
 
       {/* Alert Modal for inventory warnings */}
       <AlertModal

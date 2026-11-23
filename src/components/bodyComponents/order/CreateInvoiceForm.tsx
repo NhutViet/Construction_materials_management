@@ -188,21 +188,6 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
       item => item.materialId === selectedMaterial._id
     );
 
-    let totalRequestedQuantity = itemQuantity;
-    if (existingItemIndex !== -1) {
-      totalRequestedQuantity += formData.items[existingItemIndex].quantity;
-    }
-
-    // Check inventory availability
-    if (totalRequestedQuantity > selectedMaterial.quantity) {
-      const errorMessage = `Không đủ tồn kho cho "${selectedMaterial.name}". Tồn kho hiện tại: ${selectedMaterial.quantity}, yêu cầu: ${totalRequestedQuantity}`;
-      setErrors(prev => ({
-        ...prev,
-        items: errorMessage
-      }));
-      return;
-    }
-
     if (existingItemIndex !== -1) {
       // Update existing item quantity
       const updatedItems = [...formData.items];
@@ -255,18 +240,6 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
     if (newQuantity <= 0) return;
 
     const updatedItems = [...formData.items];
-    const item = updatedItems[index];
-    
-    // Find the material to check available stock
-    const material = materials.find(m => m._id === item.materialId);
-    if (material && newQuantity > material.quantity) {
-      const errorMessage = `Không đủ tồn kho cho "${material.name}". Tồn kho hiện tại: ${material.quantity}, yêu cầu: ${newQuantity}`;
-      setErrors(prev => ({
-        ...prev,
-        items: errorMessage
-      }));
-      return;
-    }
 
     updatedItems[index].quantity = newQuantity;
     updatedItems[index].totalPrice = newQuantity * updatedItems[index].unitPrice;
@@ -449,7 +422,6 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
                 </Box>
               );
             }}
-            getOptionDisabled={(option) => option.quantity === 0}
           />
         </Grid>
 
@@ -461,11 +433,9 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
             value={itemQuantity}
             onChange={(e) => setItemQuantity(parseInt(e.target.value))}
             inputProps={{ 
-              min: 1, 
-              max: selectedMaterial ? selectedMaterial.quantity : undefined 
+              min: 1
             }}
-            helperText={selectedMaterial ? `Tối đa: ${selectedMaterial.quantity}` : ''}
-            error={selectedMaterial && itemQuantity > selectedMaterial.quantity}
+            helperText={selectedMaterial ? `Tồn kho hiện tại: ${selectedMaterial.quantity}` : ''}
           />
         </Grid>
 
@@ -475,7 +445,7 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
             variant="outlined"
             startIcon={<AddIcon />}
             onClick={addItemToInvoice}
-            disabled={!selectedMaterial || itemQuantity <= 0 || (selectedMaterial && itemQuantity > selectedMaterial.quantity)}
+            disabled={!selectedMaterial || itemQuantity <= 0}
             sx={{ height: '56px' }}
           >
             Thêm Vào Hoá Đơn
@@ -529,13 +499,10 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
                             onChange={(e) => updateItemQuantity(index, parseInt(e.target.value) || 1)}
                             inputProps={{ 
                               min: 1, 
-                              max: material ? material.quantity : undefined,
                               style: { textAlign: 'center' } 
                             }}
                             size="small"
                             sx={{ width: '80px' }}
-                            error={material && item.quantity > material.quantity}
-                            helperText={material && item.quantity > material.quantity ? 'Vượt quá tồn kho' : ''}
                           />
                         </TableCell>
                         <TableCell align="right">
