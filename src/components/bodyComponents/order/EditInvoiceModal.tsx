@@ -62,6 +62,7 @@ interface FormData {
     deliveredAmount?: number;
     originalUnitPrice?: number;
     originalTotalPrice?: number;
+    priceLocked?: boolean;
     deliveryStatus?: 'pending' | 'partial' | 'delivered';
   }[];
   discountRate: number;
@@ -123,6 +124,7 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
             (item.deliveredQuantity || 0) * (item.originalUnitPrice ?? item.unitPrice),
           originalUnitPrice: item.originalUnitPrice,
           originalTotalPrice: item.originalTotalPrice,
+          priceLocked: item.priceLocked,
           deliveryStatus: item.deliveryStatus || 'pending'
         })),
         discountRate: Number(invoice.discountRate) || 0,
@@ -209,6 +211,7 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
       deliveredAmount: 0,
       originalUnitPrice: selectedMaterial.price,
       originalTotalPrice: selectedMaterial.price * itemQuantity,
+      priceLocked: false,
       deliveryStatus: 'pending' as const
     };
 
@@ -630,6 +633,14 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
                                     <Chip
                                       label={`Đã giao: ${delivered}`}
                                       color="info"
+                                      size="small"
+                                      variant="outlined"
+                                    />
+                                  )}
+                                  {item.priceLocked && (
+                                    <Chip
+                                      label="Đã chốt giá"
+                                      color="success"
                                       size="small"
                                       variant="outlined"
                                     />
