@@ -59,6 +59,9 @@ interface FormData {
     totalPrice: number;
     unit: string;
     deliveredQuantity?: number;
+    deliveredAmount?: number;
+    originalUnitPrice?: number;
+    originalTotalPrice?: number;
     deliveryStatus?: 'pending' | 'partial' | 'delivered';
   }[];
   discountRate: number;
@@ -115,6 +118,11 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
           totalPrice: item.totalPrice,
           unit: item.unit,
           deliveredQuantity: item.deliveredQuantity || 0,
+          deliveredAmount:
+            item.deliveredAmount ??
+            (item.deliveredQuantity || 0) * (item.originalUnitPrice ?? item.unitPrice),
+          originalUnitPrice: item.originalUnitPrice,
+          originalTotalPrice: item.originalTotalPrice,
           deliveryStatus: item.deliveryStatus || 'pending'
         })),
         discountRate: Number(invoice.discountRate) || 0,
@@ -198,6 +206,9 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
       totalPrice: selectedMaterial.price * itemQuantity,
       unit: selectedMaterial.unit,
       deliveredQuantity: 0,
+      deliveredAmount: 0,
+      originalUnitPrice: selectedMaterial.price,
+      originalTotalPrice: selectedMaterial.price * itemQuantity,
       deliveryStatus: 'pending' as const
     };
 
@@ -205,8 +216,14 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
       // Update existing item
       const updatedItems = [...formData.items];
       updatedItems[existingItemIndex].quantity += itemQuantity;
-      updatedItems[existingItemIndex].totalPrice = 
-        updatedItems[existingItemIndex].quantity * updatedItems[existingItemIndex].unitPrice;
+      const existing = updatedItems[existingItemIndex];
+      const delivered = Number(existing.deliveredQuantity || 0);
+      existing.totalPrice =
+        Math.round(
+          (Number(existing.deliveredAmount || 0) +
+            Math.max(0, existing.quantity - delivered) * existing.unitPrice) *
+            100
+        ) / 100;
       // Preserve deliveredQuantity when adding quantity to existing item
       // deliveredQuantity remains the same, only quantity increases
       setFormData(prev => ({ ...prev, items: updatedItems }));
@@ -259,7 +276,12 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
     }
 
     updatedItems[index].quantity = newQuantity;
-    updatedItems[index].totalPrice = updatedItems[index].unitPrice * newQuantity;
+    updatedItems[index].totalPrice =
+      Math.round(
+        (Number(item.deliveredAmount || 0) +
+          Math.max(0, newQuantity - delivered) * item.unitPrice) *
+          100
+      ) / 100;
     setFormData(prev => ({ ...prev, items: updatedItems }));
 
     // Clear previous errors

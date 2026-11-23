@@ -387,6 +387,9 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
     const material = materialDetails[item.materialId];
     const currentDeliveryStatus = itemDeliveryStatus[index] || 'pending';
     const currentDeliveredQuantity = itemDeliveredQuantity[index] || 0;
+    const deliveredAmountForDisplay =
+      item.deliveredAmount ??
+      Number(item.deliveredQuantity || 0) * Number(item.originalUnitPrice ?? item.unitPrice);
     
     return (
       <TableRow key={index}>
@@ -425,6 +428,11 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
                 {item.originalUnitPrice.toLocaleString()} VNĐ
               </Typography>
             )}
+            {(item.deliveredQuantity ?? 0) > 0 && item.originalUnitPrice && item.originalUnitPrice !== item.unitPrice && (
+              <Typography variant="caption" color="text.secondary">
+                Giá áp dụng cho phần còn lại
+              </Typography>
+            )}
           </Box>
         </TableCell>
         <TableCell sx={{ 
@@ -436,6 +444,11 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
               {item.totalPrice?.toLocaleString() + ' VNĐ' || '0'}
             </Typography>
+            {(item.deliveredQuantity ?? 0) > 0 && (
+              <Typography variant="caption" color="text.secondary">
+                Đã giao: {deliveredAmountForDisplay.toLocaleString()} VNĐ
+              </Typography>
+            )}
             {item.originalTotalPrice && item.originalTotalPrice !== item.totalPrice && (
               <Typography variant="caption" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
                 {item.originalTotalPrice.toLocaleString()} VNĐ
@@ -503,6 +516,29 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
     (acc: number, item: InvoiceItem) =>
       acc + Math.max(0, Number(item.quantity || 0) - Number(item.deliveredQuantity || 0)),
     0
+  );
+
+  const taxFactor =
+    1 + Number(currentOrder.taxRate || 0) / 100 - Number(currentOrder.discountRate || 0) / 100;
+  const originalItemsSubtotal = items.reduce(
+    (acc: number, item: InvoiceItem) =>
+      acc + Number(item.originalTotalPrice ?? item.totalPrice ?? 0),
+    0
+  );
+  const currentItemsSubtotal = items.reduce(
+    (acc: number, item: InvoiceItem) => acc + Number(item.totalPrice || 0),
+    0
+  );
+  const priceAdjustmentTotal = Math.round((currentItemsSubtotal - originalItemsSubtotal) * taxFactor * 100) / 100;
+  const originalTotalForDisplay = Math.round(originalItemsSubtotal * taxFactor * 100) / 100;
+  const priceAdjustmentReason = items.find((item: InvoiceItem) => item.priceAdjustmentReason)?.priceAdjustmentReason;
+  const priceAdjustedAt = items
+    .map((item: InvoiceItem) => item.priceAdjustedAt)
+    .filter(Boolean)
+    .sort()
+    .pop() as string | undefined;
+  const hasPriceAdjustment = items.some(
+    (item: InvoiceItem) => Boolean(item.priceAdjustedAt) || item.priceAdjustmentAmount !== undefined
   );
 
   return (
@@ -760,9 +796,9 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
               <Typography variant="body2" color="primary.main" sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" }, fontWeight: 600 }}>
                 {currentOrder.totalAmount?.toLocaleString() + ' VNĐ' || '0'}
               </Typography>
-              {currentOrder.originalTotalAmount && currentOrder.originalTotalAmount !== currentOrder.totalAmount && (
+              {hasPriceAdjustment && priceAdjustmentTotal !== 0 && (
                 <Typography variant="caption" color="text.secondary" sx={{ textDecoration: 'line-through', display: 'block' }}>
-                  {currentOrder.originalTotalAmount.toLocaleString()} VNĐ
+                  {originalTotalForDisplay.toLocaleString()} VNĐ
                 </Typography>
               )}
             </Box>
@@ -832,7 +868,7 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
           </Paper>
           
           {/* Price Adjustment Information */}
-          {currentOrder.totalPriceAdjustmentAmount && currentOrder.totalPriceAdjustmentAmount !== 0 && (
+          {hasPriceAdjustment && priceAdjustmentTotal !== 0 && (
             <Paper
               elevation={0}
               sx={{
@@ -851,16 +887,16 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
               </Typography>
               <Box sx={{ textAlign: { xs: "left", sm: "right" } }}>
                 <Typography variant="body2" color="warning.main" sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" }, fontWeight: 600 }}>
-                  {currentOrder.totalPriceAdjustmentAmount > 0 ? '+' : ''}{currentOrder.totalPriceAdjustmentAmount.toLocaleString()} VNĐ
+                  {priceAdjustmentTotal > 0 ? '+' : ''}{priceAdjustmentTotal.toLocaleString()} VNĐ
                 </Typography>
-                {currentOrder.priceAdjustmentReason && (
+                {priceAdjustmentReason && (
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                    Lý do: {currentOrder.priceAdjustmentReason}
+                    Lý do: {priceAdjustmentReason}
                   </Typography>
                 )}
-                {currentOrder.priceAdjustedAt && (
+                {priceAdjustedAt && (
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                    Ngày: {new Date(currentOrder.priceAdjustedAt).toLocaleDateString('vi-VN')}
+                    Ngày: {new Date(priceAdjustedAt).toLocaleDateString('vi-VN')}
                   </Typography>
                 )}
               </Box>

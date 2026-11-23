@@ -15,6 +15,8 @@ Sau đó chạy tiếp `supabase/migrations/0002_delivery_history.sql` để t�
 
 Khi chuyển sang cơ chế **chỉ trừ tồn kho lúc giao hàng**, chạy `supabase/migrations/0003_stock_on_delivery.sql`. File này cộng lại phần tồn kho đang bị giữ cho các hóa đơn cũ chưa giao; hóa đơn tạo bằng code mới được đánh dấu riêng nên không bị cộng nhầm, và chạy lại nhiều lần cũng an toàn.
 
+Sau đó chạy `supabase/migrations/0004_normalize_delivery_pricing.sql` để tính lại các hóa đơn đã bị điều chỉnh giá theo cách cũ: phần đã giao giữ giá gốc, chỉ phần còn lại nhận giá mới.
+
 Migration tạo: `profiles`, `materials`, `invoices`, `stock_in`, `notifications`, `delivery_records`, trigger tự tạo profile khi có user mới, RLS cơ bản cho phép client gọi trực tiếp.
 
 > RLS hiện đang là cấu hình prototype: mọi user đã đăng nhập đều thấy mọi bản ghi. Nếu cần phân quyền theo từng user, thêm cột `owner` và đổi policy tương ứng.

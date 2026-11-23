@@ -11,6 +11,7 @@ export interface InvoiceItem {
   totalPrice: number;
   unit: string;
   deliveredQuantity?: number;
+  deliveredAmount?: number;
   deliveryStatus?: 'pending' | 'partial' | 'delivered';
   deliveredAt?: string;
   deliveredBy?: string;
@@ -195,6 +196,7 @@ export interface DeliveryRecord {
   materialName: string;
   unit: string;
   quantity: number;
+  unitPrice?: number;
   deliveredAt: string;
   deliveredBy?: string;
   deliveredByName?: string;
@@ -216,6 +218,7 @@ export interface DeliveryBatch {
     materialName: string;
     unit: string;
     quantity: number;
+    unitPrice?: number;
   }[];
 }
 

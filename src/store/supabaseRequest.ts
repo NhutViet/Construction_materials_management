@@ -64,7 +64,8 @@ async function buildInvoiceItems(rawItems: any[]) {
     if (error) fail(error.message);
     const unitPrice = num(item.unitPrice ?? material?.price ?? 0);
     const quantity = num(item.quantity);
-    return {
+    const deliveredQuantity = num(item.deliveredQuantity);
+    return applyItemPricing({
       materialId,
       materialName: item.materialName || material?.name || 'Vật tư',
       quantity,
@@ -72,9 +73,12 @@ async function buildInvoiceItems(rawItems: any[]) {
       totalPrice: round(unitPrice * quantity),
       unit: item.unit || material?.unit || '',
       stockDeductedAtCreation: false,
-      ...(item.deliveredQuantity !== undefined ? { deliveredQuantity: num(item.deliveredQuantity) } : {}),
+      deliveredQuantity,
+      ...(item.deliveredAmount !== undefined ? { deliveredAmount: num(item.deliveredAmount) } : {}),
+      ...(item.originalUnitPrice !== undefined ? { originalUnitPrice: num(item.originalUnitPrice) } : {}),
+      ...(item.originalTotalPrice !== undefined ? { originalTotalPrice: num(item.originalTotalPrice) } : {}),
       ...(item.deliveryStatus ? { deliveryStatus: item.deliveryStatus } : {}),
-    };
+    });
   }));
 }
 
@@ -85,6 +89,42 @@ function derivePayment(paidAmount: number, totalAmount: number) {
   const remaining = Math.max(0, round(totalAmount - paid));
   const status = remaining === 0 ? 'paid' : paid > 0 ? 'partial' : 'unpaid';
   return { paidAmount: paid, remainingAmount: remaining, paymentStatus: status };
+}
+
+/**
+ * Giá trị phần đã giao.
+ * - Nếu item đã có deliveredAmount thì giữ nguyên (giá tại thời điểm giao).
+ * - Nếu chưa có (dữ liệu cũ), tạm tính theo giá gốc (originalUnitPrice) hoặc giá hiện tại.
+ */
+function itemDeliveredAmount(item: any) {
+  const delivered = num(item.deliveredQuantity);
+  if (item.deliveredAmount !== undefined && item.deliveredAmount !== null) {
+    return round(num(item.deliveredAmount));
+  }
+  const price = num(item.originalUnitPrice ?? item.unitPrice);
+  return round(delivered * price);
+}
+
+/**
+ * Tính lại thành tiền theo mô hình:
+ * - phần đã giao giữ giá trị đã chốt (deliveredAmount)
+ * - phần còn lại nhân với unitPrice hiện tại
+ */
+function applyItemPricing(item: any) {
+  const quantity = num(item.quantity);
+  const delivered = num(item.deliveredQuantity);
+  const remaining = Math.max(0, quantity - delivered);
+  const deliveredAmount = itemDeliveredAmount(item);
+  const unitPrice = num(item.unitPrice);
+  const originalUnitPrice = num(item.originalUnitPrice ?? unitPrice);
+  return {
+    ...item,
+    deliveredQuantity: delivered,
+    deliveredAmount,
+    originalUnitPrice,
+    originalTotalPrice: item.originalTotalPrice ?? round(originalUnitPrice * quantity),
+    totalPrice: round(deliveredAmount + remaining * unitPrice),
+  };
 }
 
 function deliveryStatusOf(invoice: any) {
@@ -127,7 +167,7 @@ function deliveredAmountOf(invoice: any) {
       deliveredQuantity: delivered,
       remainingQuantity: round(qty - delivered),
       unitPrice,
-      deliveredAmount: round(delivered * unitPrice),
+      deliveredAmount: itemDeliveredAmount(item),
       deliveryStatus: delivered >= qty ? 'delivered' : delivered > 0 ? 'partial' : 'pending',
       deliveredAt: item.deliveredAt || '',
     };
@@ -186,6 +226,7 @@ function deliveryHistoryOf(invoice: any, records: any[]) {
       materialName: record.materialName,
       unit: record.unit || '',
       quantity: num(record.quantity),
+      unitPrice: num(record.unitPrice),
     });
     batchMap.set(key, batch);
   });
@@ -201,6 +242,7 @@ function deliveryHistoryOf(invoice: any, records: any[]) {
       unitPrice: num(item.unitPrice),
       orderedQuantity: ordered,
       deliveredQuantity: delivered,
+      deliveredAmount: itemDeliveredAmount(item),
       remainingQuantity: round(ordered - delivered),
       deliveryStatus: delivered >= ordered ? 'delivered' : delivered > 0 ? 'partial' : 'pending',
     };
@@ -273,7 +315,17 @@ function groupDeliveryBatches(records: any[], invoiceMap: Map<string, any>) {
     const item =
       invoiceItems[record.itemIndex] ||
       invoiceItems.find((entry: any) => entry.materialId && entry.materialId === record.materialId);
-    const unitPrice = num(item?.unitPrice);
+    const recordUnitPrice = num(record.unitPrice);
+    let unitPrice = recordUnitPrice > 0 ? recordUnitPrice : num(item?.unitPrice);
+
+    // Dữ liệu cũ chưa lưu giá tại thời điểm giao: suy ra theo mốc điều chỉnh giá.
+    if (recordUnitPrice <= 0 && item?.priceAdjustedAt && item?.originalUnitPrice !== undefined) {
+      const deliveredTime = record.deliveredAt ? new Date(record.deliveredAt).getTime() : 0;
+      const adjustedTime = new Date(item.priceAdjustedAt).getTime();
+      if (deliveredTime && adjustedTime && deliveredTime < adjustedTime) {
+        unitPrice = num(item.originalUnitPrice);
+      }
+    }
     const quantity = num(record.quantity);
 
     batch.totalQuantity = round(batch.totalQuantity + quantity);
@@ -399,18 +451,72 @@ export async function supabaseRequest({ method, path, body, params, isPublic }: 
 
       const affected: any[] = [];
       const invoices = await activeInvoices();
+      const newPrice = num(body.price);
       for (const invoice of invoices) {
         const items = invoice.items || [];
         if (!items.some((item: any) => item.materialId === second)) continue;
-        const newItems = items.map((item: any) => item.materialId === second
-          ? { ...item, originalUnitPrice: item.originalUnitPrice ?? item.unitPrice, originalTotalPrice: item.originalTotalPrice ?? item.totalPrice, unitPrice: num(body.price), totalPrice: round(num(body.price) * num(item.quantity)), priceAdjustmentAmount: round((num(body.price) - num(item.unitPrice)) * num(item.quantity)), priceAdjustmentReason: body.priceUpdateReason || '', priceAdjustedAt: nowIso() }
-          : item);
+
+        let changed = false;
+        const newItems = items.map((item: any) => {
+          if (item.materialId !== second) return item;
+
+          const quantity = num(item.quantity);
+          const delivered = num(item.deliveredQuantity);
+          const remaining = Math.max(0, quantity - delivered);
+          const normalized = applyItemPricing(item);
+
+          // Đã giao đủ: không đổi giá, chỉ chuẩn hoá lại thành tiền.
+          if (remaining <= 0) {
+            if (
+              round(num(normalized.totalPrice)) !== round(num(item.totalPrice)) ||
+              num(normalized.deliveredAmount) !== num(item.deliveredAmount)
+            ) {
+              changed = true;
+            }
+            return normalized;
+          }
+
+          const oldUnitPrice = num(item.unitPrice);
+          const deliveredAmount = itemDeliveredAmount(item);
+          const originalUnitPrice = num(item.originalUnitPrice ?? oldUnitPrice);
+          const oldTotal = round(deliveredAmount + remaining * oldUnitPrice);
+          const newTotal = round(deliveredAmount + remaining * newPrice);
+          if (newTotal !== oldTotal) changed = true;
+
+          return {
+            ...item,
+            originalUnitPrice,
+            originalTotalPrice: item.originalTotalPrice ?? round(originalUnitPrice * quantity),
+            unitPrice: newPrice,
+            totalPrice: newTotal,
+            deliveredAmount,
+            adjustedUnitPrice: newPrice,
+            adjustedTotalPrice: newTotal,
+            priceAdjustmentAmount: round(newTotal - (deliveredAmount + remaining * originalUnitPrice)),
+            priceAdjustmentReason: body.priceUpdateReason || '',
+            priceAdjustedAt: nowIso(),
+          };
+        });
+
+        if (!changed) continue;
+
+        const oldTotalAmount = num(invoice.totalAmount);
         const totals = computeTotals(newItems, invoice.taxRate, invoice.discountRate);
-        await supabase.from('invoices').update({ items: newItems, ...totals, updatedAt: nowIso() }).eq('_id', invoice._id);
+        const payment = derivePayment(num(invoice.paidAmount), totals.totalAmount);
+        const delta = round(totals.totalAmount - oldTotalAmount);
+
+        const { error: updateError } = await supabase.from('invoices').update({
+          items: newItems,
+          ...totals,
+          ...payment,
+          updatedAt: nowIso(),
+        }).eq('_id', invoice._id);
+        if (updateError) fail(updateError.message);
+
         affected.push({
           invoiceId: invoice._id, invoiceNumber: invoice.invoiceNumber, customerName: invoice.customerName,
-          oldTotalAmount: num(invoice.totalAmount), newTotalAmount: totals.totalAmount,
-          priceDifference: round(totals.totalAmount - num(invoice.totalAmount)), items: newItems,
+          oldTotalAmount, newTotalAmount: totals.totalAmount,
+          priceDifference: delta, items: newItems,
         });
       }
       return { material, affectedInvoices: affected };
@@ -614,12 +720,21 @@ export async function supabaseRequest({ method, path, body, params, isPublic }: 
         }
 
         const newDelivered = round(already + quantity);
+        const batchPrice = num(item.unitPrice);
+        const previousDeliveredAmount = itemDeliveredAmount(item);
+        const newDeliveredAmount = round(previousDeliveredAmount + quantity * batchPrice);
+        const remainingAfter = Math.max(0, ordered - newDelivered);
+
         items[index] = {
           ...item,
           deliveredQuantity: newDelivered,
+          deliveredAmount: newDeliveredAmount,
+          totalPrice: round(newDeliveredAmount + remainingAfter * batchPrice),
           deliveryStatus: newDelivered >= ordered ? 'delivered' : newDelivered > 0 ? 'partial' : 'pending',
           deliveredAt,
           deliveredBy: user.id,
+          originalUnitPrice: item.originalUnitPrice ?? batchPrice,
+          originalTotalPrice: item.originalTotalPrice ?? round(batchPrice * ordered),
         };
         records.push({
           invoiceId: second,
@@ -646,9 +761,11 @@ export async function supabaseRequest({ method, path, body, params, isPublic }: 
       const allDelivered = items.every((item: any) => num(item.deliveredQuantity) >= num(item.quantity));
       const anyDelivered = items.some((item: any) => num(item.deliveredQuantity) > 0);
       const status = allDelivered ? 'delivered' : anyDelivered ? 'confirmed' : invoice.status;
+      const totals = computeTotals(items, invoice.taxRate, invoice.discountRate);
+      const payment = derivePayment(num(invoice.paidAmount), totals.totalAmount);
 
       const updated = check(
-        await supabase.from('invoices').update({ items, status, updatedAt: nowIso() }).eq('_id', second).select().single()
+        await supabase.from('invoices').update({ items, status, ...totals, ...payment, updatedAt: nowIso() }).eq('_id', second).select().single()
       );
 
       const { error: recordError } = await supabase.from('delivery_records').insert(records);
@@ -717,12 +834,26 @@ export async function supabaseRequest({ method, path, body, params, isPublic }: 
       const qty = num(items[index].quantity);
       const previousDelivered = num(items[index].deliveredQuantity);
       const delivered = Math.min(qty, num(body?.deliveredQuantity));
+      const delta = round(delivered - previousDelivered);
+      const batchPrice = num(items[index].unitPrice);
+      const newDeliveredAmount = round(itemDeliveredAmount(items[index]) + delta * batchPrice);
+      const remainingAfter = Math.max(0, qty - delivered);
       const deliveredAt = delivered > 0 ? nowIso() : null;
-      items[index] = { ...items[index], deliveredQuantity: delivered, deliveryStatus: delivered >= qty ? 'delivered' : delivered > 0 ? 'partial' : 'pending', deliveredAt };
-      const updated = check(await supabase.from('invoices').update({ items, updatedAt: nowIso() }).eq('_id', second).select().single());
+      items[index] = {
+        ...items[index],
+        deliveredQuantity: delivered,
+        deliveredAmount: newDeliveredAmount,
+        totalPrice: round(newDeliveredAmount + remainingAfter * batchPrice),
+        deliveryStatus: delivered >= qty ? 'delivered' : delivered > 0 ? 'partial' : 'pending',
+        deliveredAt,
+        originalUnitPrice: items[index].originalUnitPrice ?? batchPrice,
+        originalTotalPrice: items[index].originalTotalPrice ?? round(batchPrice * qty),
+      };
+      const totals = computeTotals(items, invoice.taxRate, invoice.discountRate);
+      const payment = derivePayment(num(invoice.paidAmount), totals.totalAmount);
+      const updated = check(await supabase.from('invoices').update({ items, ...totals, ...payment, updatedAt: nowIso() }).eq('_id', second).select().single());
 
       // Ghi thêm lịch sử phần giao tăng thêm (không ghi đè lịch sử cũ).
-      const delta = round(delivered - previousDelivered);
       if (delta > 0) {
         const user = await currentUser();
         const { data: profile } = await supabase.from('profiles').select('fullname').eq('id', user.id).maybeSingle();
@@ -778,10 +909,24 @@ export async function supabaseRequest({ method, path, body, params, isPublic }: 
         // mặt hàng mới thêm thì đánh dấu false để không bị cộng tồn kho sai.
         const stockMarker = oldItem ? oldItem.stockDeductedAtCreation : false;
         const { stockDeductedAtCreation: _newStockMarker, ...itemWithoutMarker } = item;
+        const deliveredAmount = oldItem ? itemDeliveredAmount(oldItem) : 0;
+        const unitPrice = num(item.unitPrice);
+        const remaining = Math.max(0, item.quantity - delivered);
         return {
           ...itemWithoutMarker,
           ...(stockMarker !== undefined ? { stockDeductedAtCreation: stockMarker } : {}),
           deliveredQuantity: delivered,
+          deliveredAmount,
+          unitPrice,
+          totalPrice: round(deliveredAmount + remaining * unitPrice),
+          originalUnitPrice: oldItem?.originalUnitPrice ?? item.originalUnitPrice ?? unitPrice,
+          originalTotalPrice:
+            oldItem?.originalTotalPrice ?? item.originalTotalPrice ?? round(unitPrice * item.quantity),
+          ...(oldItem?.adjustedUnitPrice !== undefined ? { adjustedUnitPrice: oldItem.adjustedUnitPrice } : {}),
+          ...(oldItem?.adjustedTotalPrice !== undefined ? { adjustedTotalPrice: oldItem.adjustedTotalPrice } : {}),
+          ...(oldItem?.priceAdjustmentAmount !== undefined ? { priceAdjustmentAmount: oldItem.priceAdjustmentAmount } : {}),
+          ...(oldItem?.priceAdjustmentReason ? { priceAdjustmentReason: oldItem.priceAdjustmentReason } : {}),
+          ...(oldItem?.priceAdjustedAt ? { priceAdjustedAt: oldItem.priceAdjustedAt } : {}),
           deliveryStatus: delivered >= item.quantity ? 'delivered' : delivered > 0 ? 'partial' : 'pending',
           ...(oldItem?.deliveredAt ? { deliveredAt: oldItem.deliveredAt } : {}),
           ...(oldItem?.deliveredBy ? { deliveredBy: oldItem.deliveredBy } : {}),
