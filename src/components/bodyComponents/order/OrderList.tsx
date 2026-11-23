@@ -3,7 +3,7 @@ import { DataGrid, GridPagination, GridPaginationModel } from "@mui/x-data-grid"
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "../../../store";
-import { fetchInvoices, setSelectedInvoice, selectInvoices, selectInvoicesLoading, selectInvoicesError, selectInvoicesFilters, selectInvoicesPagination } from "../../../store/slices/invoiceSlice";
+import { fetchInvoices, setSelectedInvoice, fetchInvoiceById, selectInvoices, selectInvoicesLoading, selectInvoicesError, selectInvoicesFilters, selectInvoicesPagination } from "../../../store/slices/invoiceSlice";
 import OrderModal from "./OrderModal";
 import OrderFilterBar from "./OrderFilterBar";
 
@@ -82,12 +82,15 @@ export default function OrderList() {
   const handleOrderDetail = (order) => {
     console.log("the order is : ", order);
     setSelectedOrder(order);
+    dispatch(setSelectedInvoice(order));
+    dispatch(fetchInvoiceById(order._id));
     setOpen(true);
   };
 
   const handleClose = () => {
     setOpen(false);
     setSelectedOrder(null);
+    dispatch(setSelectedInvoice(null));
   };
   const getStatusColor = (status: string) => {
     switch (status) {

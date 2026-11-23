@@ -73,6 +73,7 @@ async function buildInvoiceItems(rawItems: any[]) {
       totalPrice: round(unitPrice * quantity),
       unit: item.unit || material?.unit || '',
       stockDeductedAtCreation: false,
+      priceLocked: false,
       deliveredQuantity,
       ...(item.deliveredAmount !== undefined ? { deliveredAmount: num(item.deliveredAmount) } : {}),
       ...(item.originalUnitPrice !== undefined ? { originalUnitPrice: num(item.originalUnitPrice) } : {}),
@@ -459,6 +460,8 @@ export async function supabaseRequest({ method, path, body, params, isPublic }: 
         let changed = false;
         const newItems = items.map((item: any) => {
           if (item.materialId !== second) return item;
+          // Sản phẩm đã chốt giá thì không bị ảnh hưởng khi giá vật tư thay đổi.
+          if (item.priceLocked === true) return item;
 
           const quantity = num(item.quantity);
           const delivered = num(item.deliveredQuantity);
@@ -885,6 +888,65 @@ export async function supabaseRequest({ method, path, body, params, isPublic }: 
       }
       return updated;
     }
+
+    if (method === 'PATCH' && second && third === 'items' && fifth === 'price-lock') {
+      const { data: invoice, error } = await supabase.from('invoices').select('*').eq('_id', second).maybeSingle();
+      if (error) fail(error.message);
+      if (!invoice) fail('Không tìm thấy hóa đơn', 404);
+
+      const index = num(fourth);
+      const items = [...(invoice.items || [])];
+      const item = items[index];
+      if (!item) fail('Không tìm thấy item', 404);
+
+      const locked = body?.locked === true;
+      if (locked) {
+        // Chốt giá: quay về giá gốc đã thoả thuận và giữ cố định cho phần còn lại.
+        const lockedUnitPrice = num(item.originalUnitPrice ?? item.unitPrice);
+        const deliveredAmount = itemDeliveredAmount(item);
+        const quantity = num(item.quantity);
+        const delivered = num(item.deliveredQuantity);
+        items[index] = {
+          ...item,
+          priceLocked: true,
+          lockedUnitPrice,
+          priceLockedAt: nowIso(),
+          unitPrice: lockedUnitPrice,
+          originalUnitPrice: item.originalUnitPrice ?? lockedUnitPrice,
+          deliveredAmount,
+          totalPrice: round(deliveredAmount + Math.max(0, quantity - delivered) * lockedUnitPrice),
+        };
+      } else {
+        // Bỏ chốt: áp lại giá hiện tại của vật tư cho phần còn lại.
+        const { data: material } = item.materialId
+          ? await supabase.from('materials').select('price').eq('_id', item.materialId).maybeSingle()
+          : { data: null };
+        const currentUnitPrice = material?.price !== undefined ? num(material.price) : num(item.unitPrice);
+        const deliveredAmount = itemDeliveredAmount(item);
+        const quantity = num(item.quantity);
+        const delivered = num(item.deliveredQuantity);
+        items[index] = {
+          ...item,
+          priceLocked: false,
+          priceLockedAt: nowIso(),
+          unitPrice: currentUnitPrice,
+          deliveredAmount,
+          totalPrice: round(deliveredAmount + Math.max(0, quantity - delivered) * currentUnitPrice),
+        };
+      }
+
+      const totals = computeTotals(items, invoice.taxRate, invoice.discountRate);
+      const payment = derivePayment(num(invoice.paidAmount), totals.totalAmount);
+      return check(
+        await supabase
+          .from('invoices')
+          .update({ items, ...totals, ...payment, updatedAt: nowIso() })
+          .eq('_id', second)
+          .select()
+          .single()
+      );
+    }
+
     if (method === 'PATCH' && second) {
       const { data: existingInvoice, error: existingError } = await supabase.from('invoices').select('*').eq('_id', second).maybeSingle();
       if (existingError) fail(existingError.message);
@@ -927,6 +989,9 @@ export async function supabaseRequest({ method, path, body, params, isPublic }: 
           ...(oldItem?.priceAdjustmentAmount !== undefined ? { priceAdjustmentAmount: oldItem.priceAdjustmentAmount } : {}),
           ...(oldItem?.priceAdjustmentReason ? { priceAdjustmentReason: oldItem.priceAdjustmentReason } : {}),
           ...(oldItem?.priceAdjustedAt ? { priceAdjustedAt: oldItem.priceAdjustedAt } : {}),
+          ...(oldItem?.priceLocked !== undefined ? { priceLocked: oldItem.priceLocked } : {}),
+          ...(oldItem?.lockedUnitPrice !== undefined ? { lockedUnitPrice: oldItem.lockedUnitPrice } : {}),
+          ...(oldItem?.priceLockedAt ? { priceLockedAt: oldItem.priceLockedAt } : {}),
           deliveryStatus: delivered >= item.quantity ? 'delivered' : delivered > 0 ? 'partial' : 'pending',
           ...(oldItem?.deliveredAt ? { deliveredAt: oldItem.deliveredAt } : {}),
           ...(oldItem?.deliveredBy ? { deliveredBy: oldItem.deliveredBy } : {}),

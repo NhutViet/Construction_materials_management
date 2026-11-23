@@ -13,6 +13,9 @@ export interface InvoiceItem {
   deliveredQuantity?: number;
   deliveredAmount?: number;
   deliveryStatus?: 'pending' | 'partial' | 'delivered';
+  priceLocked?: boolean;
+  lockedUnitPrice?: number;
+  priceLockedAt?: string;
   deliveredAt?: string;
   deliveredBy?: string;
   
@@ -621,6 +624,21 @@ export const updateItemDelivery = createAsyncThunk(
   }
 );
 
+export const updateItemPriceLock = createAsyncThunk(
+  'invoice/updateItemPriceLock',
+  async (
+    { id, itemIndex, locked }: { id: string; itemIndex: number; locked: boolean },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await AxiosInstance().patch(`/invoices/${id}/items/${itemIndex}/price-lock`, { locked });
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to update item price lock');
+    }
+  }
+);
+
 export const fetchDeliveryStatus = createAsyncThunk(
   'invoice/fetchDeliveryStatus',
   async (id: string, { rejectWithValue }) => {
@@ -1166,6 +1184,27 @@ const invoiceSlice = createSlice({
         }
       })
       .addCase(updateItemDelivery.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      });
+
+    // Update item price lock
+    builder
+      .addCase(updateItemPriceLock.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(updateItemPriceLock.fulfilled, (state, action: PayloadAction<Invoice>) => {
+        state.isLoading = false;
+        const index = state.invoices.findIndex(inv => inv._id === action.payload._id);
+        const allIndex = state.allInvoices.findIndex(inv => inv._id === action.payload._id);
+        if (index !== -1) state.invoices[index] = action.payload;
+        if (allIndex !== -1) state.allInvoices[allIndex] = action.payload;
+        if (state.selectedInvoice?._id === action.payload._id) {
+          state.selectedInvoice = action.payload;
+        }
+      })
+      .addCase(updateItemPriceLock.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       });

@@ -17,13 +17,15 @@ import {
   Chip,
   Tooltip,
   IconButton,
+  Switch,
+  FormControlLabel,
 } from "@mui/material";
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { RootState, AppDispatch } from "../../../store";
 import { fetchMaterialById, fetchMaterials, Material } from "../../../store/slices/materialSlice";
-import { Invoice, InvoiceItem, updateInvoiceStatus, fetchInvoiceById, fetchDeliveredAmount } from "../../../store/slices/invoiceSlice";
+import { Invoice, InvoiceItem, updateInvoiceStatus, updateItemPriceLock, fetchInvoiceById, fetchDeliveredAmount } from "../../../store/slices/invoiceSlice";
 import DeliveryModal from "./DeliveryModal";
 import EditInvoiceModal from "./EditInvoiceModal";
 import PaymentModal from "./PaymentModal";
@@ -47,6 +49,7 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
   const [deliveryModalOpen, setDeliveryModalOpen] = useState(false);
   const [deliveryMode, setDeliveryMode] = useState<'partial' | 'all'>('partial');
   const [deliveryItemIndex, setDeliveryItemIndex] = useState<number | null>(null);
+  const [priceLockSaving, setPriceLockSaving] = useState<number | null>(null);
 
   const getStatusText = (status: string) => {
     switch (status) {
@@ -271,6 +274,33 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
     alertModal.showSuccess('Đã ghi nhận giao hàng.', 'Thành công');
   };
 
+  const handleTogglePriceLock = async (itemIndex: number, locked: boolean) => {
+    if (!currentOrder) return;
+    setPriceLockSaving(itemIndex);
+    try {
+      await dispatch(
+        updateItemPriceLock({ id: currentOrder._id, itemIndex, locked })
+      ).unwrap();
+      try {
+        await dispatch(fetchInvoiceById(currentOrder._id)).unwrap();
+        await dispatch(fetchDeliveredAmount(currentOrder._id)).unwrap();
+      } catch (refreshError) {
+        console.warn('Không thể refresh dữ liệu hóa đơn:', refreshError);
+      }
+      alertModal.showSuccess(
+        locked ? 'Đã chốt giá sản phẩm.' : 'Đã bỏ chốt giá sản phẩm.',
+        'Thành công'
+      );
+    } catch (err: any) {
+      alertModal.showError(
+        typeof err === 'string' ? err : 'Không thể cập nhật chốt giá.',
+        'Lỗi'
+      );
+    } finally {
+      setPriceLockSaving(null);
+    }
+  };
+
   const getDeliveryStatusText = (status: string) => {
     switch (status) {
       case 'pending': return 'Chờ giao';
@@ -471,6 +501,37 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
               {item.unit}
             </Typography>
           </Box>
+        </TableCell>
+        <TableCell sx={{ 
+          fontSize: { xs: "0.75rem", sm: "0.875rem" },
+          minWidth: "130px",
+          textAlign: "center"
+        }}>
+          <FormControlLabel
+            sx={{ m: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}
+            control={
+              <Switch
+                size="small"
+                checked={item.priceLocked === true}
+                onChange={(event) => handleTogglePriceLock(index, event.target.checked)}
+                disabled={currentOrder.status === 'cancelled' || priceLockSaving === index}
+              />
+            }
+            label={
+              <Typography
+                variant="caption"
+                color={item.priceLocked ? 'success.main' : 'text.secondary'}
+                sx={{ fontWeight: 600 }}
+              >
+                {item.priceLocked ? 'Đã chốt' : 'Chưa chốt'}
+              </Typography>
+            }
+          />
+          {item.priceLocked && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+              Giữ giá gốc
+            </Typography>
+          )}
         </TableCell>
         <TableCell sx={{ 
           fontSize: { xs: "0.75rem", sm: "0.875rem" },
@@ -996,6 +1057,17 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
                     position: "sticky",
                     top: 0,
                     zIndex: 1,
+                    minWidth: "130px"
+                  }}>
+                    Chốt giá
+                  </TableCell>
+                  <TableCell sx={{ 
+                    fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                    fontWeight: 600,
+                    bgcolor: "grey.100",
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 1,
                     minWidth: "200px"
                   }}>
                     Trạng thái giao hàng
@@ -1017,7 +1089,7 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
                 {/* loop through the items list */}
                 {materialLoading ? (
                   <TableRow>
-                    <TableCell colSpan={8} sx={{ textAlign: 'center', py: 4 }}>
+                    <TableCell colSpan={9} sx={{ textAlign: 'center', py: 4 }}>
                       <CircularProgress size={24} />
                       <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                         Đang tải chi tiết vật liệu...
@@ -1026,7 +1098,7 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
                   </TableRow>
                 ) : tableRows.length > 0 ? tableRows : (
                   <TableRow>
-                    <TableCell colSpan={8} sx={{ textAlign: 'center', py: 4 }}>
+                    <TableCell colSpan={9} sx={{ textAlign: 'center', py: 4 }}>
                       <Typography variant="body2" color="text.secondary">
                         Không tìm thấy sản phẩm nào trong đơn hàng này
                       </Typography>
