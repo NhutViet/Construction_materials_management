@@ -4,13 +4,18 @@
     <meta charset="UTF-8" />
     <title>Đang chuyển hướng...</title>
     <script>
-      // GitHub Pages serve file này cho mọi URL không tồn tại (deep link của SPA).
-      // Chuyển về index.html kèm đường dẫn gốc trong query để index.html khôi phục.
+      // GitHub Pages trả 404.html cho mọi deep link của SPA.
+      // Chuyển về trang gốc của repo kèm đường dẫn trong query (?/dashboard/orders).
       (function () {
-        var base = window.location.pathname.replace(/\/404\.html$/, '/');
-        var path = window.location.pathname.slice(base.length);
-        var search = window.location.search ? window.location.search.replace('?', '&') : '';
-        window.location.replace(base + '?/' + path + search);
+        var pathSegmentsToKeep = 1; // /Construction_materials_management
+        var l = window.location;
+        l.replace(
+          l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+            l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
+            l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
+            (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+            l.hash
+        );
       })();
     </script>
   </head>
