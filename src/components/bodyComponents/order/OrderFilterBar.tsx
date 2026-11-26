@@ -229,7 +229,7 @@ const OrderFilterBar: React.FC = () => {
                 variant="outlined"
                 startIcon={<ClearIcon />}
                 onClick={handleClearFilters}
-                sx={{ height: '40px' }}
+                sx={{ height: '40px', width: { xs: '100%', sm: 'auto' } }}
               >
                 Xóa tất cả bộ lọc
               </Button>

@@ -25,7 +25,9 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import { 
   Add as AddIcon, 
@@ -88,6 +90,8 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
   const dispatch = useDispatch<AppDispatch>();
   const { isLoading, error } = useSelector((state: RootState) => state.invoice);
   const { materials } = useSelector((state: RootState) => state.materials);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const [formData, setFormData] = useState<FormData>({
     customerName: '',
@@ -438,8 +442,9 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
       onClose={handleClose}
       maxWidth="lg"
       fullWidth
+      fullScreen={isMobile}
       PaperProps={{
-        sx: { minHeight: '80vh' }
+        sx: { minHeight: isMobile ? '100dvh' : '80vh', borderRadius: isMobile ? 0 : undefined }
       }}
     >
       <DialogTitle>

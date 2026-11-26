@@ -23,7 +23,7 @@ const StockInAnalytics: React.FC = () => {
 
   if (error) {
     return (
-      <Box sx={{ p: 3, mx: 3 }}>
+      <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 }, mx: { xs: 0, sm: 2, md: 3 } }}>
         <Alert severity="error">{error}</Alert>
       </Box>
     );
@@ -31,14 +31,14 @@ const StockInAnalytics: React.FC = () => {
 
   if (isStockInLoading) {
     return (
-      <Box sx={{ p: 3, mx: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+      <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 }, mx: { xs: 0, sm: 2, md: 3 }, display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
         <CircularProgress />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ p: 3, mx: 3 }}>
+    <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 }, mx: { xs: 0, sm: 2, md: 3 } }}>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom>

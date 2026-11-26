@@ -16,7 +16,10 @@ import {
   DialogContent,
   DialogActions,
   Autocomplete,
+  Alert,
   CircularProgress,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import {
   Edit,
@@ -35,6 +38,8 @@ const Profile: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { user, isProfileLoading, error } = useSelector((state: RootState) => state.auth);
   const { banks, loading: banksLoading, error: banksError } = useBanks();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
   const [isEditMode, setIsEditMode] = useState(false);
   const [editData, setEditData] = useState({
@@ -144,8 +149,8 @@ const Profile: React.FC = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }}>
+    <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
+      <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold', fontSize: { xs: '1.4rem', sm: '2rem' } }}>
         Thông tin cá nhân
       </Typography>
 
@@ -156,11 +161,11 @@ const Profile: React.FC = () => {
             <CardContent sx={{ textAlign: 'center', p: 3 }}>
               <Avatar
                 sx={{
-                  width: 120,
-                  height: 120,
+                  width: { xs: 96, sm: 120 },
+                  height: { xs: 96, sm: 120 },
                   mx: 'auto',
                   mb: 2,
-                  fontSize: '3rem',
+                  fontSize: { xs: '2.4rem', sm: '3rem' },
                   bgcolor: 'primary.main',
                 }}
               >
@@ -294,7 +299,7 @@ const Profile: React.FC = () => {
       </Grid>
 
       {/* Edit Dialog */}
-      <Dialog open={openDialog} onClose={handleCancel} maxWidth="sm" fullWidth>
+      <Dialog open={openDialog} onClose={handleCancel} maxWidth="sm" fullWidth fullScreen={isMobile}>
         <DialogTitle>Chỉnh sửa thông tin cá nhân</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>

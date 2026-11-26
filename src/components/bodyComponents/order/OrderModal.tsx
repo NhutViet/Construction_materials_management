@@ -19,6 +19,9 @@ import {
   IconButton,
   Switch,
   FormControlLabel,
+  Divider,
+  useTheme,
+  useMediaQuery,
 } from "@mui/material";
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -40,6 +43,8 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
   const { selectedInvoice, deliveredAmount, deliveredAmountLoading } = useSelector((state: RootState) => state.invoice);
   const alertModal = useAlertModal();
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [materialDetails, setMaterialDetails] = useState<Record<string, any>>({});
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -602,20 +607,111 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
     (item: InvoiceItem) => Boolean(item.priceAdjustedAt) || item.priceAdjustmentAmount !== undefined
   );
 
+  const mobileItemCards = items.map((item: InvoiceItem, index: number) => {
+    const material = materialDetails[item.materialId];
+    const currentDeliveryStatus = itemDeliveryStatus[index] || 'pending';
+    const currentDeliveredQuantity = itemDeliveredQuantity[index] || 0;
+    const deliveredAmountForDisplay =
+      item.deliveredAmount ??
+      Number(item.deliveredQuantity || 0) * Number(item.originalUnitPrice ?? item.unitPrice);
+
+    return (
+      <Paper key={index} variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, wordBreak: 'break-word' }}>
+              {material ? material.name : item.materialName || 'N/A'}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {currentDeliveredQuantity}/{item.quantity} {item.unit} đã giao
+            </Typography>
+          </Box>
+          <Chip
+            label={getDeliveryStatusText(currentDeliveryStatus)}
+            color={getDeliveryStatusColor(currentDeliveryStatus)}
+            size="small"
+            sx={{ flexShrink: 0 }}
+          />
+        </Box>
+
+        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, mt: 1.5 }}>
+          <Box>
+            <Typography variant="caption" color="text.secondary">Đơn giá</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main' }}>
+              {item.unitPrice?.toLocaleString()} VNĐ
+            </Typography>
+            {item.originalUnitPrice && item.originalUnitPrice !== item.unitPrice && (
+              <Typography variant="caption" color="text.secondary" sx={{ textDecoration: 'line-through', display: 'block' }}>
+                {item.originalUnitPrice.toLocaleString()} VNĐ
+              </Typography>
+            )}
+            {(item.deliveredQuantity ?? 0) > 0 && item.originalUnitPrice && item.originalUnitPrice !== item.unitPrice && (
+              <Typography variant="caption" color="text.secondary">
+                Giá phần còn lại
+              </Typography>
+            )}
+          </Box>
+          <Box sx={{ textAlign: 'right' }}>
+            <Typography variant="caption" color="text.secondary">Thành tiền</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 600, color: 'success.main' }}>
+              {item.totalPrice?.toLocaleString()} VNĐ
+            </Typography>
+            {(item.deliveredQuantity ?? 0) > 0 && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                Đã giao: {deliveredAmountForDisplay.toLocaleString()} VNĐ
+              </Typography>
+            )}
+          </Box>
+        </Box>
+
+        <Divider sx={{ my: 1.5 }} />
+
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}>
+          <FormControlLabel
+            sx={{ m: 0 }}
+            control={
+              <Switch
+                size="small"
+                checked={item.priceLocked === true}
+                onChange={(event) => handleTogglePriceLock(index, event.target.checked)}
+                disabled={currentOrder.status === 'cancelled' || priceLockSaving === index}
+              />
+            }
+            label={
+              <Typography variant="caption" color={item.priceLocked ? 'success.main' : 'text.secondary'} sx={{ fontWeight: 600 }}>
+                {item.priceLocked ? 'Đã chốt giá' : 'Chốt giá'}
+              </Typography>
+            }
+          />
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<EditIcon />}
+            onClick={() => openDeliveryModal('partial', index)}
+            disabled={currentOrder.status === 'cancelled' || currentDeliveredQuantity >= item.quantity}
+          >
+            Giao hàng
+          </Button>
+        </Box>
+      </Paper>
+    );
+  });
+
   return (
     <Box
       sx={{
         position: "absolute",
-        left: "50%",
-        top: "50%",
-        transform: "translate(-50%, -50%)",
-        width: { xs: "98%", sm: "95%", md: "85%", lg: "75%" },
-        maxWidth: "1200px",
-        maxHeight: { xs: "90vh", sm: "85vh" },
+        left: { xs: 0, sm: "50%" },
+        top: { xs: 0, sm: "50%" },
+        transform: { xs: "none", sm: "translate(-50%, -50%)" },
+        width: { xs: "100%", sm: "95%", md: "85%", lg: "75%" },
+        maxWidth: { xs: "100%", sm: "1200px" },
+        height: { xs: "100dvh", sm: "auto" },
+        maxHeight: { xs: "100dvh", sm: "85vh" },
         bgcolor: "white",
-        borderRadius: 2,
+        borderRadius: { xs: 0, sm: 2 },
         boxShadow: 24,
-        p: { xs: 2, sm: 3, md: 4 },
+        p: { xs: 1.5, sm: 3, md: 4 },
         overflow: "auto",
         display: "flex",
         flexDirection: "column",
@@ -964,6 +1060,11 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
             </Paper>
           )}
         </Box>
+        {isMobile ? (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, mb: 2 }}>
+            {mobileItemCards}
+          </Box>
+        ) : (
         <Box sx={{ flex: 1, overflow: "hidden" }}>
           <TableContainer 
             sx={{ 
@@ -1108,6 +1209,8 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
               </TableBody>
             </Table>
           </TableContainer>
+        </Box>
+        )}
           <Paper
             elevation={0}
             sx={{
@@ -1176,7 +1279,6 @@ const OrderModal: React.FC<{ order: Invoice | null; onClose?: () => void }> = ({
               </Button>
             )}
           </Paper>
-        </Box>
       </Box>
 
       {/* Paid Stamp */}

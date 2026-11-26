@@ -22,6 +22,8 @@ import {
   TextField,
   Tooltip,
   Typography,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import {
   ExpandLess as ExpandLessIcon,
@@ -78,6 +80,8 @@ const invoiceStatusColor = (status: string): any => {
 const DeliveryLogPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { deliveryLog, deliveryLogLoading, deliveryLogError } = useSelector(
     (state: RootState) => state.invoice
   );
@@ -148,6 +152,118 @@ const DeliveryLogPage: React.FC = () => {
     { label: 'Giá trị đã giao', value: summary?.deliveredValue ?? 0, format: formatCurrency },
   ];
 
+  const mobileBatchCards = rows.map((batch) => {
+    const key = `${batch.invoiceId}:${batch.batchId}`;
+    const isExpanded = expanded === key;
+    const color = invoiceColor(batch.invoiceId || batch.invoiceNumber);
+
+    return (
+      <Paper key={key} variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, alignItems: 'flex-start' }}>
+          <Box sx={{ minWidth: 0 }}>
+            <Box
+              component="span"
+              onClick={() => navigate(`/dashboard/orders/${batch.invoiceId}/deliveries`)}
+              sx={{
+                display: 'inline-block',
+                px: 1,
+                py: 0.25,
+                borderRadius: 1,
+                bgcolor: color.background,
+                color: color.text,
+                border: `1px solid ${color.border}`,
+                fontWeight: 700,
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                maxWidth: '100%',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {batch.invoiceNumber || '—'}
+            </Box>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
+              {formatDateTime(batch.deliveredAt)}
+            </Typography>
+            <Typography variant="body2" sx={{ fontWeight: 600, mt: 0.5 }}>
+              {batch.customerName || '—'}
+            </Typography>
+            {batch.customerPhone && (
+              <Typography variant="caption" color="text.secondary">
+                {batch.customerPhone}
+              </Typography>
+            )}
+          </Box>
+          <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
+            {batch.invoiceStatus && (
+              <Chip
+                size="small"
+                label={invoiceStatusLabel(batch.invoiceStatus)}
+                color={invoiceStatusColor(batch.invoiceStatus)}
+                variant="outlined"
+                sx={{ height: 22, fontSize: '0.7rem' }}
+              />
+            )}
+            <Typography variant="body2" sx={{ fontWeight: 700, mt: 0.75 }}>
+              {formatQuantity(batch.totalQuantity)}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+              {formatCurrency(batch.deliveredValue)}
+            </Typography>
+          </Box>
+        </Box>
+
+        <Typography variant="body2" sx={{ mt: 1 }}>
+          {batch.items
+            .slice(0, 2)
+            .map((item) => `${item.materialName} ×${formatQuantity(item.quantity)}`)
+            .join(', ')}
+          {batch.items.length > 2 ? ` +${batch.items.length - 2} mặt hàng` : ''}
+        </Typography>
+
+        <Divider sx={{ my: 1.25 }} />
+
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
+          <Typography variant="caption" color="text.secondary">
+            Người giao: {batch.deliveredByName || '—'}
+          </Typography>
+          <Button size="small" onClick={() => toggleExpanded(key)}>
+            {isExpanded ? 'Ẩn chi tiết' : 'Chi tiết'}
+          </Button>
+        </Box>
+
+        {isExpanded && (
+          <Box sx={{ mt: 1 }}>
+            {batch.items.map((item) => (
+              <Box
+                key={item.recordId}
+                sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, py: 0.75, borderBottom: '1px solid #f0f0f0' }}
+              >
+                <Typography variant="body2" sx={{ minWidth: 0, wordBreak: 'break-word' }}>
+                  {item.materialName}
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 600, flexShrink: 0 }}>
+                  {formatQuantity(item.quantity)} {item.unit}
+                </Typography>
+              </Box>
+            ))}
+            {batch.notes && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                Ghi chú: {batch.notes}
+              </Typography>
+            )}
+            {batch.customerAddress && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                Địa chỉ: {batch.customerAddress}
+              </Typography>
+            )}
+          </Box>
+        )}
+      </Paper>
+    );
+  });
+
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
       <Box
@@ -180,7 +296,7 @@ const DeliveryLogPage: React.FC = () => {
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
+          gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
           gap: 2,
           mb: 3,
         }}
@@ -274,6 +390,21 @@ const DeliveryLogPage: React.FC = () => {
 
       <Paper elevation={0} sx={{ border: '1px solid #e0e0e0', borderRadius: 2, overflow: 'hidden' }}>
         {deliveryLogLoading && <LinearProgress />}
+        {isMobile ? (
+          <Box sx={{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            {loadingFirstTime && (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <CircularProgress />
+              </Box>
+            )}
+            {!loadingFirstTime && rows.length === 0 && (
+              <Typography color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                Không có lần giao hàng nào khớp bộ lọc.
+              </Typography>
+            )}
+            {mobileBatchCards}
+          </Box>
+        ) : (
         <TableContainer>
           <Table size="small">
             <TableHead>
@@ -485,7 +616,7 @@ const DeliveryLogPage: React.FC = () => {
             </TableBody>
           </Table>
         </TableContainer>
-
+        )}
         <TablePagination
           component="div"
           count={total}
@@ -501,6 +632,16 @@ const DeliveryLogPage: React.FC = () => {
           labelDisplayedRows={({ from, to, count }) =>
             `${from}–${to} của ${count !== -1 ? count : `hơn ${to}`}`
           }
+          sx={{
+            '& .MuiTablePagination-toolbar': {
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+              px: { xs: 1, sm: 2 },
+            },
+            '& .MuiTablePagination-selectLabel': {
+              display: { xs: 'none', sm: 'block' },
+            },
+          }}
         />
       </Paper>
     </Container>

@@ -31,6 +31,7 @@ export type Column = {
   render?: (val: any, row?: any) => React.ReactNode;
   width?: string | number;
   align?: 'left' | 'center' | 'right';
+  mobileHide?: boolean;
 };
 
 type ReusableTableProps = {
@@ -67,6 +68,7 @@ export const Table: React.FC<ReusableTableProps> = ({
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const visibleColumns = isMobile ? columns.filter((col) => !col.mobileHide) : columns;
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -126,7 +128,8 @@ export const Table: React.FC<ReusableTableProps> = ({
           boxShadow: theme.shadows[2],
           borderRadius: 2,
           flex: 1,
-          overflow: 'auto'
+          overflow: 'auto',
+          WebkitOverflowScrolling: 'touch',
         }}
       >
         <MuiTable stickyHeader={stickyHeader} size={isMobile ? 'small' : 'medium'}>
@@ -142,7 +145,7 @@ export const Table: React.FC<ReusableTableProps> = ({
                   }}
                 />
               )}
-              {columns.map((col) => (
+              {visibleColumns.map((col) => (
                 <TableCell
                   key={col.key}
                   className={headerCellClassName}
@@ -151,10 +154,13 @@ export const Table: React.FC<ReusableTableProps> = ({
                     backgroundColor: theme.palette.primary.main,
                     color: theme.palette.primary.contrastText,
                     fontWeight: 'bold',
-                    width: col.width || 'auto',
-                    minWidth: col.width || 'auto',
+                    width: isMobile ? 'auto' : (col.width || 'auto'),
+                    minWidth: isMobile ? 0 : (col.width || 'auto'),
                     textAlign: col.align || 'left',
-                    verticalAlign: 'middle'
+                    verticalAlign: 'middle',
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    whiteSpace: isMobile ? 'normal' : 'nowrap',
+                    px: { xs: 0.75, sm: 2 },
                   }}
                 >
                   {col.title}
@@ -193,16 +199,19 @@ export const Table: React.FC<ReusableTableProps> = ({
                         </IconButton>
                       </TableCell>
                     )}
-                    {columns.map((col) => (
+                    {visibleColumns.map((col) => (
                       <TableCell
                         key={col.key}
                         className={cellClassName}
                         align={col.align || 'left'}
                         sx={{
-                          width: col.width || 'auto',
-                          minWidth: col.width || 'auto',
+                          width: isMobile ? 'auto' : (col.width || 'auto'),
+                          minWidth: isMobile ? 0 : (col.width || 'auto'),
                           textAlign: col.align || 'left',
-                          verticalAlign: 'middle'
+                          verticalAlign: 'middle',
+                          fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                          whiteSpace: isMobile ? 'normal' : 'nowrap',
+                          px: { xs: 0.75, sm: 2 },
                         }}
                       >
                         {col.render ? col.render(row[col.key], row) : row[col.key]}
@@ -215,7 +224,7 @@ export const Table: React.FC<ReusableTableProps> = ({
                     <TableRow>
                       <TableCell 
                         style={{ paddingBottom: 0, paddingTop: 0 }} 
-                        colSpan={columns.length + (expandable ? 1 : 0)}
+                        colSpan={visibleColumns.length + (expandable ? 1 : 0)}
                       >
                         <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                           <Box sx={{ margin: 1, padding: 2, backgroundColor: theme.palette.grey[50] }}>

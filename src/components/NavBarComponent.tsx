@@ -39,7 +39,7 @@ import {
   Menu as MenuIcon,
 } from "@mui/icons-material";
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link as RouterLink } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../store";
 import { logout } from "../store/slices/authSlice";
@@ -339,18 +339,19 @@ const NavBarComponent: React.FC<NavBarComponentProps> = ({ onMenuClick }) => {
 
   return (
     <Grid container>
-      <Grid item md={12}>
-        <Paper elevation={4}>
+      <Grid item xs={12}>
+        <Paper elevation={4} sx={{ position: 'sticky', top: 0, zIndex: 1200 }}>
           <AppBar 
             sx={{ 
-              padding: { xs: 1, sm: 2 },
-              height: '64px',
+              padding: { xs: 0.5, sm: 1, md: 2 },
+              height: { xs: '56px', sm: '64px' },
               display: 'flex',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              backgroundImage: 'none',
             }} 
             position="static"
           >
-            <Container maxWidth="xl">
+            <Container maxWidth="xl" sx={{ px: { xs: 1, sm: 2 } }}>
               <Box
                 sx={{
                   display: "flex",
@@ -362,10 +363,10 @@ const NavBarComponent: React.FC<NavBarComponentProps> = ({ onMenuClick }) => {
                 {isMobile && (
                   <IconButton
                     color="inherit"
-                    aria-label="open drawer"
+                    aria-label="Mở menu"
                     edge="start"
                     onClick={onMenuClick}
-                    sx={{ mr: 2 }}
+                    sx={{ mr: { xs: 0.5, sm: 2 }, p: 1 }}
                   >
                     <MenuIcon />
                   </IconButton>
@@ -373,17 +374,21 @@ const NavBarComponent: React.FC<NavBarComponentProps> = ({ onMenuClick }) => {
 
                 <Typography
                   variant="h6"
-                  component="a"
-                  href="/dashboard"
+                  component={RouterLink}
+                  to="/dashboard"
                   sx={{
-                    mx: 2,
+                    mx: { xs: 0.5, sm: 2 },
                     display: { xs: isMobile ? "block" : "none", md: "flex" },
                     fontWeight: 700,
-                    letterSpacing: ".2rem",
+                    letterSpacing: { xs: 0, sm: ".1rem", md: ".2rem" },
                     color: "inherit",
                     textDecoration: "none",
-                    fontSize: { xs: "1rem", sm: "1.25rem", md: "1.5rem" },
+                    fontSize: { xs: "0.95rem", sm: "1.1rem", md: "1.25rem" },
                     flex: 1,
+                    minWidth: 0,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
                     textAlign: { xs: "center", md: "left" }
                   }}
                 >
@@ -395,12 +400,14 @@ const NavBarComponent: React.FC<NavBarComponentProps> = ({ onMenuClick }) => {
                     display: "flex",
                     justifyContent: "right",
                     alignItems: "center",
+                    gap: { xs: 0.25, sm: 0.75 },
+                    flexShrink: 0,
                   }}
                 >
-                  <IconButton color="inherit" onClick={handleNotificationClicked}>
+                  <IconButton color="inherit" onClick={handleNotificationClicked} aria-label="Thông báo" sx={{ p: { xs: 0.75, sm: 1 } }}>
                     <Badge badgeContent={unreadCount} color="error" invisible={unreadCount === 0}>
                       <NotificationsOutlined
-                        sx={{ width: 32, height: 32 }}
+                        sx={{ width: { xs: 26, sm: 32 }, height: { xs: 26, sm: 32 } }}
                       />
                     </Badge>
                   </IconButton>
@@ -408,8 +415,14 @@ const NavBarComponent: React.FC<NavBarComponentProps> = ({ onMenuClick }) => {
                     open={notificationOpen}
                     anchorEl={notificationAnchorEl}
                     onClose={notificationHandleClose}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                    transformOrigin={{ vertical: 'top', horizontal: 'right' }}
                     PaperProps={{
-                      sx: { width: 400, maxHeight: 500 }
+                      sx: {
+                        width: { xs: 'calc(100vw - 24px)', sm: 400 },
+                        maxWidth: 'calc(100vw - 24px)',
+                        maxHeight: { xs: '70dvh', sm: 500 },
+                      }
                     }}
                   >
                     <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
@@ -540,14 +553,21 @@ const NavBarComponent: React.FC<NavBarComponentProps> = ({ onMenuClick }) => {
                   <IconButton
                     onClick={handleAvatarClicked}
                     size="small"
-                    sx={{ mx: 2 }}
+                    sx={{ mx: { xs: 0.5, sm: 2 }, p: 0.5 }}
                     aria-haspopup="true"
+                    aria-label="Tài khoản"
                   >
                     <Tooltip title="Cài đặt tài khoản">
-                      <Avatar sx={{ width: 32, height: 32 }}>{getUserInitials()}</Avatar>
+                      <Avatar sx={{ width: { xs: 30, sm: 32 }, height: { xs: 30, sm: 32 } }}>{getUserInitials()}</Avatar>
                     </Tooltip>
                   </IconButton>
-                  <Typography fontFamily={"Inter"}>{getDisplayName()}</Typography>
+                  <Typography
+                    fontFamily={"Inter"}
+                    noWrap
+                    sx={{ display: { xs: 'none', sm: 'block' }, maxWidth: 160, fontSize: '0.9rem' }}
+                  >
+                    {getDisplayName()}
+                  </Typography>
                 </Box>
 
                 <Menu
@@ -580,6 +600,7 @@ const NavBarComponent: React.FC<NavBarComponentProps> = ({ onMenuClick }) => {
       <Dialog
         open={deleteDialogOpen}
         onClose={cancelDeleteNotification}
+        fullScreen={isMobile}
         aria-labelledby="delete-dialog-title"
         aria-describedby="delete-dialog-description"
       >
@@ -613,7 +634,7 @@ const NavBarComponent: React.FC<NavBarComponentProps> = ({ onMenuClick }) => {
         open={snackbarOpen}
         autoHideDuration={6000}
         onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: isMobile ? 'center' : 'right' }}
       >
         <Alert 
           onClose={handleSnackbarClose} 

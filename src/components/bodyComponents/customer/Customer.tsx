@@ -57,14 +57,14 @@ const Customer: React.FC = () => {
   }
 
   return (
-    <Box sx={{ m: 0, p: 3, width: "100%" }}>
-      <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }}>
+    <Box sx={{ m: 0, p: { xs: 1.5, sm: 2, md: 3 }, width: "100%" }}>
+      <Typography variant="h4" sx={{ mb: { xs: 2, sm: 3 }, fontWeight: 'bold', fontSize: { xs: '1.4rem', sm: '2rem' } }}>
         Thống Kê Khách Hàng
       </Typography>
       
       {/* Tabs for different views */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs value={tabValue} onChange={handleTabChange} aria-label="customer analytics tabs">
+        <Tabs value={tabValue} onChange={handleTabChange} aria-label="customer analytics tabs" variant="scrollable" allowScrollButtonsMobile>
           <Tab label="Tổng Quan Khách Hàng" />
           <Tab label="Thống Kê Khu Vực" />
         </Tabs>
@@ -73,50 +73,50 @@ const Customer: React.FC = () => {
       {tabValue === 0 && (
         <>
           {customerAnalytics && (
-            <Grid container spacing={3} sx={{ mb: 3 }}>
-              <Grid item xs={12} md={3}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" color="primary">
+            <Grid container spacing={{ xs: 1.5, md: 3 }} sx={{ mb: 3 }}>
+              <Grid item xs={6} md={3}>
+                <Card sx={{ height: '100%' }}>
+                  <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                    <Typography variant="h6" color="primary" sx={{ fontSize: { xs: '0.8rem', sm: '1rem' } }}>
                       Tổng Khách Hàng
                     </Typography>
-                    <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                    <Typography variant="h4" sx={{ fontWeight: 'bold', fontSize: { xs: '1.3rem', sm: '2rem' } }}>
                       {customerAnalytics.customerOverview.totalCustomers.toLocaleString()}
                     </Typography>
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid item xs={12} md={3}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" color="primary">
+              <Grid item xs={6} md={3}>
+                <Card sx={{ height: '100%' }}>
+                  <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                    <Typography variant="h6" color="primary" sx={{ fontSize: { xs: '0.8rem', sm: '1rem' } }}>
                       Tổng Hóa Đơn
                     </Typography>
-                    <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                    <Typography variant="h4" sx={{ fontWeight: 'bold', fontSize: { xs: '1.3rem', sm: '2rem' } }}>
                       {customerAnalytics.customerOverview.totalInvoices.toLocaleString()}
                     </Typography>
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid item xs={12} md={3}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" color="primary">
+              <Grid item xs={6} md={3}>
+                <Card sx={{ height: '100%' }}>
+                  <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                    <Typography variant="h6" color="primary" sx={{ fontSize: { xs: '0.8rem', sm: '1rem' } }}>
                       HĐ Trung Bình/KH
                     </Typography>
-                    <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                    <Typography variant="h4" sx={{ fontWeight: 'bold', fontSize: { xs: '1.3rem', sm: '2rem' } }}>
                       {customerAnalytics.customerOverview.avgInvoicesPerCustomer.toFixed(1)}
                     </Typography>
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid item xs={12} md={3}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" color="primary">
+              <Grid item xs={6} md={3}>
+                <Card sx={{ height: '100%' }}>
+                  <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                    <Typography variant="h6" color="primary" sx={{ fontSize: { xs: '0.8rem', sm: '1rem' } }}>
                       Tỷ Lệ Giữ Chân
                     </Typography>
-                    <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                    <Typography variant="h4" sx={{ fontWeight: 'bold', fontSize: { xs: '1.3rem', sm: '2rem' } }}>
                       {(customerAnalytics.customerRetention.retentionRate * 100).toFixed(1)}%
                     </Typography>
                   </CardContent>

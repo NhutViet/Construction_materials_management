@@ -188,7 +188,7 @@ const DeliveryHistoryPage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: 3 }}>
+    <Container maxWidth="xl" sx={{ py: { xs: 1.5, sm: 3 }, px: { xs: 1, sm: 3 } }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
         <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/dashboard/orders')}>
           Quay lại
@@ -250,7 +250,7 @@ const DeliveryHistoryPage: React.FC = () => {
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
+          gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
           gap: 2,
           mb: 3,
         }}
@@ -290,8 +290,8 @@ const DeliveryHistoryPage: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell sx={{ fontWeight: 700 }}>Mặt hàng</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 700 }}>Đặt</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 700 }}>Đã giao</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 700, display: { xs: 'none', sm: 'table-cell' } }}>Đặt</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 700, display: { xs: 'none', sm: 'table-cell' } }}>Đã giao</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 700 }}>Còn lại</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 700, minWidth: 140 }}>
                       Giao lần này
@@ -317,8 +317,8 @@ const DeliveryHistoryPage: React.FC = () => {
                             sx={{ height: 6, borderRadius: 3, mt: 0.75, maxWidth: 220 }}
                           />
                         </TableCell>
-                        <TableCell align="right">{item.orderedQuantity.toLocaleString('vi-VN')}</TableCell>
-                        <TableCell align="right">{item.deliveredQuantity.toLocaleString('vi-VN')}</TableCell>
+                        <TableCell align="right" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{item.orderedQuantity.toLocaleString('vi-VN')}</TableCell>
+                        <TableCell align="right" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{item.deliveredQuantity.toLocaleString('vi-VN')}</TableCell>
                         <TableCell align="right">
                           <Chip
                             size="small"
@@ -373,8 +373,8 @@ const DeliveryHistoryPage: React.FC = () => {
               />
             </Box>
 
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, mt: 2 }}>
-              <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center' }}>
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'flex-end', alignItems: { xs: 'stretch', sm: 'center' }, gap: 1.5, mt: 2 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ alignSelf: { xs: 'flex-start', sm: 'center' } }}>
                 Tổng giao lần này: <strong>{totalToDeliver.toLocaleString('vi-VN')}</strong>
               </Typography>
               <Button
@@ -382,6 +382,7 @@ const DeliveryHistoryPage: React.FC = () => {
                 startIcon={deliverySaving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
                 onClick={handleSubmit}
                 disabled={deliverySaving || totalToDeliver <= 0}
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
               >
                 {deliverySaving ? 'Đang lưu...' : 'Xác nhận giao'}
               </Button>

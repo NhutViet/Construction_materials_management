@@ -25,35 +25,36 @@ const HomePage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="md" sx={{ py: 8 }}>
-      <Box textAlign="center" mb={6}>
-        <Typography variant="h3" component="h1" fontWeight="bold" gutterBottom>
+    <Container maxWidth="md" sx={{ py: { xs: 4, sm: 8 }, px: { xs: 1.5, sm: 3 } }}>
+      <Box textAlign="center" mb={{ xs: 3, sm: 6 }}>
+        <Typography variant="h3" component="h1" fontWeight="bold" gutterBottom sx={{ fontSize: { xs: '1.7rem', sm: '2.4rem', md: '3rem' } }}>
           Hệ thống quản lý vật liệu xây dựng
         </Typography>
-        <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
+        <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
           Quản lý kho hàng, đơn hàng và tra cứu hóa đơn một cách hiệu quả
         </Typography>
       </Box>
 
-      <Grid container spacing={4} justifyContent="center">
+      <Grid container spacing={{ xs: 2, sm: 4 }} justifyContent="center">
         <Grid item xs={12} sm={6} md={5}>
-          <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <CardContent sx={{ flexGrow: 1, textAlign: 'center', py: 4 }}>
-              <LoginIcon sx={{ fontSize: 64, color: 'primary.main', mb: 2 }} />
-              <Typography variant="h5" component="h2" gutterBottom fontWeight="bold">
+          <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderRadius: 3 }}>
+            <CardContent sx={{ flexGrow: 1, textAlign: 'center', py: { xs: 3, sm: 4 }, px: { xs: 2, sm: 3 } }}>
+              <LoginIcon sx={{ fontSize: { xs: 52, sm: 64 }, color: 'primary.main', mb: 2 }} />
+              <Typography variant="h5" component="h2" gutterBottom fontWeight="bold" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
                 Đăng nhập hệ thống
               </Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 3, fontSize: { xs: '0.9rem', sm: '1rem' } }}>
                 Truy cập đầy đủ các tính năng quản lý kho hàng, đơn hàng, khách hàng và báo cáo doanh thu.
               </Typography>
             </CardContent>
-            <CardActions sx={{ justifyContent: 'center', pb: 3 }}>
+            <CardActions sx={{ justifyContent: 'center', pb: 3, px: { xs: 2, sm: 3 } }}>
               <Button
                 variant="contained"
                 size="large"
                 startIcon={<LoginIcon />}
                 onClick={handleLogin}
-                sx={{ px: 4, py: 1.5 }}
+                fullWidth
+                sx={{ px: 4, py: 1.5, maxWidth: { sm: 260 } }}
               >
                 Đăng nhập
               </Button>
@@ -62,23 +63,24 @@ const HomePage: React.FC = () => {
         </Grid>
 
         <Grid item xs={12} sm={6} md={5}>
-          <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <CardContent sx={{ flexGrow: 1, textAlign: 'center', py: 4 }}>
-              <SearchIcon sx={{ fontSize: 64, color: 'secondary.main', mb: 2 }} />
-              <Typography variant="h5" component="h2" gutterBottom fontWeight="bold">
+          <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderRadius: 3 }}>
+            <CardContent sx={{ flexGrow: 1, textAlign: 'center', py: { xs: 3, sm: 4 }, px: { xs: 2, sm: 3 } }}>
+              <SearchIcon sx={{ fontSize: { xs: 52, sm: 64 }, color: 'secondary.main', mb: 2 }} />
+              <Typography variant="h5" component="h2" gutterBottom fontWeight="bold" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
                 Tra cứu hóa đơn
               </Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 3, fontSize: { xs: '0.9rem', sm: '1rem' } }}>
                 Tìm kiếm và xem thông tin hóa đơn bằng mã hóa đơn, số điện thoại hoặc tên khách hàng.
               </Typography>
             </CardContent>
-            <CardActions sx={{ justifyContent: 'center', pb: 3 }}>
+            <CardActions sx={{ justifyContent: 'center', pb: 3, px: { xs: 2, sm: 3 } }}>
               <Button
                 variant="outlined"
                 size="large"
                 startIcon={<SearchIcon />}
                 onClick={handleSearch}
-                sx={{ px: 4, py: 1.5 }}
+                fullWidth
+                sx={{ px: 4, py: 1.5, maxWidth: { sm: 260 } }}
               >
                 Tra cứu ngay
               </Button>
@@ -87,7 +89,7 @@ const HomePage: React.FC = () => {
         </Grid>
       </Grid>
 
-      <Box mt={6} textAlign="center">
+      <Box mt={{ xs: 4, sm: 6 }} textAlign="center">
         <Typography variant="body2" color="text.secondary">
           © 2024 Hệ thống quản lý vật liệu xây dựng. Tất cả quyền được bảo lưu.
         </Typography>
