@@ -169,7 +169,7 @@ const DashboardSummary: React.FC = () => {
   return (
     <Grid
       container
-      spacing={{ xs: 2, md: 3 }}
+      spacing={{ xs: 1.5, sm: 2, md: 3 }}
       // sx={{
       //   marginX: { xs: 0, sm: 1, md: 3 },
       //   padding: 0,
@@ -192,19 +192,19 @@ const DashboardSummary: React.FC = () => {
               overflow: "hidden",
             }}
           >
-            <CardContent sx={{ p: 3, position: "relative", zIndex: 2 }}>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2, md: 3 }, position: "relative", zIndex: 2 }}>
               <Box
                 sx={{
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  mb: 2,
+                  mb: { xs: 1, sm: 2 },
                 }}
               >
                 <Box
                   sx={{
-                    width: 60,
-                    height: 60,
+                    width: { xs: 48, sm: 60 },
+                    height: { xs: 48, sm: 60 },
                     borderRadius: "50%",
                     background: "rgba(255,255,255,0.2)",
                     display: "flex",
@@ -221,8 +221,10 @@ const DashboardSummary: React.FC = () => {
                 sx={{
                   color: "white",
                   fontWeight: "bold",
-                  fontSize: "2rem",
+                  fontSize: { xs: "1.15rem", sm: "1.5rem", md: "2rem" },
+                  lineHeight: 1.2,
                   mb: 0.5,
+                  wordBreak: "break-word",
                   textShadow: "0 2px 4px rgba(0,0,0,0.1)",
                 }}
               >
@@ -232,7 +234,7 @@ const DashboardSummary: React.FC = () => {
                 variant="body2"
                 sx={{
                   color: "rgba(255,255,255,0.9)",
-                  fontSize: "0.9rem",
+                  fontSize: { xs: "0.75rem", sm: "0.9rem" },
                   fontWeight: 500,
                   mb: 0.5,
                 }}
@@ -244,7 +246,8 @@ const DashboardSummary: React.FC = () => {
                   variant="caption"
                   sx={{
                     color: "rgba(255,255,255,0.8)",
-                    fontSize: "0.75rem",
+                    fontSize: { xs: "0.65rem", sm: "0.75rem" },
+                    lineHeight: 1.25,
                     display: "flex",
                     alignItems: "center",
                     gap: 0.5,

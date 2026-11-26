@@ -18,6 +18,8 @@ import {
   TableRow,
   TextField,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import { LocalShipping as LocalShippingIcon } from '@mui/icons-material';
 import { AppDispatch } from '../../../store';
@@ -48,6 +50,8 @@ const DeliveryModal: React.FC<DeliveryModalProps> = ({
   onSuccess,
 }) => {
   const dispatch = useDispatch<AppDispatch>();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [quantities, setQuantities] = useState<Record<number, string>>({});
   const [notes, setNotes] = useState('');
   const [deliveredAt, setDeliveredAt] = useState(nowLocalInput());
@@ -144,7 +148,7 @@ const DeliveryModal: React.FC<DeliveryModalProps> = ({
   const title = isAllMode ? 'Xác nhận giao toàn bộ phần còn lại' : 'Ghi nhận giao hàng một phần';
 
   return (
-    <Dialog open={open} onClose={saving ? undefined : onClose} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={saving ? undefined : onClose} maxWidth="md" fullWidth fullScreen={isMobile}>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <LocalShippingIcon color="primary" />
         {title}
@@ -179,8 +183,8 @@ const DeliveryModal: React.FC<DeliveryModalProps> = ({
                 <TableHead>
                   <TableRow>
                     <TableCell sx={{ fontWeight: 700 }}>Mặt hàng</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 700 }}>Đặt</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 700 }}>Đã giao</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 700, display: { xs: 'none', sm: 'table-cell' } }}>Đặt</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 700, display: { xs: 'none', sm: 'table-cell' } }}>Đã giao</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 700 }}>Còn lại</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 700, minWidth: 130 }}>
                       Giao lần này
@@ -195,8 +199,8 @@ const DeliveryModal: React.FC<DeliveryModalProps> = ({
                           {row.item.materialName}
                         </Typography>
                       </TableCell>
-                      <TableCell align="right">{formatQuantity(row.ordered)}</TableCell>
-                      <TableCell align="right">{formatQuantity(row.delivered)}</TableCell>
+                      <TableCell align="right" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{formatQuantity(row.ordered)}</TableCell>
+                      <TableCell align="right" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{formatQuantity(row.delivered)}</TableCell>
                       <TableCell align="right">
                         <Chip
                           size="small"
@@ -261,8 +265,8 @@ const DeliveryModal: React.FC<DeliveryModalProps> = ({
         )}
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, py: 2 }}>
-        <Typography variant="body2" color="text.secondary" sx={{ mr: 'auto' }}>
+      <DialogActions sx={{ px: { xs: 2, sm: 3 }, py: 2, flexWrap: 'wrap', gap: 1 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mr: { xs: 0, sm: 'auto' }, width: { xs: '100%', sm: 'auto' } }}>
           Tổng giao lần này: <strong>{formatQuantity(totalToDeliver)}</strong>
         </Typography>
         <Button onClick={onClose} disabled={saving}>

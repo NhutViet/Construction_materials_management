@@ -1,4 +1,4 @@
-import { Avatar, Box, Button, Modal, Typography, Chip, CircularProgress } from "@mui/material";
+import { Avatar, Box, Button, Modal, Typography, Chip, CircularProgress, useMediaQuery, useTheme } from "@mui/material";
 import { DataGrid, GridPagination, GridPaginationModel } from "@mui/x-data-grid";
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -9,6 +9,8 @@ import OrderFilterBar from "./OrderFilterBar";
 
 export default function OrderList() {
   const dispatch = useDispatch<AppDispatch>();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const invoices = useSelector(selectInvoices);
   const isLoading = useSelector(selectInvoicesLoading);
   const error = useSelector(selectInvoicesError);
@@ -266,7 +268,8 @@ export default function OrderList() {
           borderLeft: 0,
           borderRight: 0,
           borderRadius: 0,
-          height: 'calc(100vh - 100px)', // Đảm bảo có chiều cao cố định
+          height: { xs: 'calc(100dvh - 230px)', md: 'calc(100vh - 100px)' },
+          minHeight: 360,
           '& .MuiDataGrid-row': {
             cursor: 'pointer',
           },
@@ -274,13 +277,15 @@ export default function OrderList() {
             backgroundColor: 'rgba(0, 0, 0, 0.04)',
           },
           '& .MuiDataGrid-cell': {
-            fontSize: '16px',
+            fontSize: { xs: '0.8rem', md: '16px' },
+            py: { xs: 0.5, md: 1 },
           },
           '& .MuiDataGrid-columnHeader': {
-            fontSize: '16px',
+            fontSize: { xs: '0.8rem', md: '16px' },
             fontWeight: 'bold',
             backgroundColor: '#1976d2',
             color: 'white',
+            minHeight: { xs: '44px !important', md: '56px !important' },
           },
           '& .MuiDataGrid-columnHeader:hover': {
             backgroundColor: '#1565c0',
@@ -288,29 +293,46 @@ export default function OrderList() {
           '& .MuiDataGrid-footerContainer': {
             borderTop: '1px solid #e0e0e0',
             backgroundColor: '#f5f5f5',
-            minHeight: '52px', // Đảm bảo footer có chiều cao tối thiểu
-            justifyContent: 'center', // Căn giữa pagination
+            minHeight: '52px',
+            justifyContent: 'center',
+            flexWrap: 'wrap',
           },
           '& .MuiTablePagination-root': {
             fontSize: '14px',
             minHeight: '52px',
-            justifyContent: 'center', // Căn giữa pagination
+            justifyContent: 'center',
             width: '100%',
           },
           '& .MuiTablePagination-toolbar': {
             minHeight: '52px',
-            justifyContent: 'center', // Căn giữa toolbar
+            justifyContent: 'center',
             width: '100%',
+            flexWrap: 'wrap',
+            px: { xs: 0.5, md: 2 },
           },
           '& .MuiTablePagination-selectLabel': {
             fontSize: '14px',
+            display: { xs: 'none', sm: 'block' },
           },
           '& .MuiTablePagination-displayedRows': {
             fontSize: '14px',
+            m: { xs: 0.5, sm: 2 },
           },
         }}
         rows={invoices}
         columns={columns}
+        density={isMobile ? 'compact' : 'standard'}
+        columnVisibilityModel={
+          isMobile
+            ? {
+                customerPhone: false,
+                paymentStatus: false,
+                deliveryDate: false,
+                createdAt: false,
+              }
+            : undefined
+        }
+        disableColumnMenu={isMobile}
         getRowId={(row) => row._id}
         paginationModel={paginationModel}
         onPaginationModelChange={handlePaginationModelChange}

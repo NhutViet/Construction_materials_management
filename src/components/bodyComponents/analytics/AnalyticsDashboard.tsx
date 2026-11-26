@@ -60,7 +60,7 @@ function TabPanel(props: TabPanelProps) {
       aria-labelledby={`analytics-tab-${index}`}
       {...other}
     >
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
+      {value === index && <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>{children}</Box>}
     </div>
   );
 }
@@ -124,7 +124,7 @@ const AnalyticsDashboard: React.FC = () => {
 
   if (error) {
     return (
-      <Box sx={{ p: 3 }}>
+      <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
         <Alert 
           severity="error" 
           action={

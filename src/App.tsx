@@ -1,4 +1,4 @@
-import { ThemeProvider, CssBaseline, createTheme } from "@mui/material";
+import { ThemeProvider, CssBaseline, createTheme, responsiveFontSizes } from "@mui/material";
 import RootComponent from "./components/RootComponent";
 import RootPage from "./components/RootPage";
 import "../public/app.css";
@@ -26,31 +26,71 @@ import HomePage from "./components/HomePage";
 import { StockInAnalytics } from "./components/bodyComponents/analytics";
 
 const App: React.FC = () => {
-  const theme = createTheme({
-    spacing: 4,
-    palette: {
-      mode: "light",
-
-      // primary: {
-      //   main: "#573BFE",
-      // },
-      // text: {
-      //   primary: "#202635",
-      //   secondary: "#A0AEC0",
-      // },
-      // secondary: {
-      //   main: "#01C0F6",
-      // },
-      // error: {
-      //   main: "#E03137",
-      // },
-    },
-
-    typography: {
-      fontFamily: "Inter",
-    },
-    //here we customize our typographi and in the variant prop we can use out myVar value
-  });
+  const theme = responsiveFontSizes(
+    createTheme({
+      spacing: 4,
+      palette: {
+        mode: "light",
+      },
+      shape: {
+        borderRadius: 10,
+      },
+      typography: {
+        fontFamily: "Inter",
+        button: {
+          textTransform: "none",
+          fontWeight: 600,
+        },
+      },
+      components: {
+        MuiCssBaseline: {
+          styleOverrides: {
+            html: {
+              WebkitTextSizeAdjust: "100%",
+            },
+            body: {
+              overflowX: "hidden",
+              WebkitTapHighlightColor: "transparent",
+            },
+            "img, svg": {
+              maxWidth: "100%",
+            },
+          },
+        },
+        MuiButton: {
+          styleOverrides: {
+            root: {
+              borderRadius: 10,
+              minHeight: 40,
+            },
+            sizeSmall: {
+              minHeight: 32,
+            },
+          },
+        },
+        MuiIconButton: {
+          styleOverrides: {
+            root: {
+              touchAction: "manipulation",
+            },
+          },
+        },
+        MuiDialog: {
+          styleOverrides: {
+            paper: {
+              borderRadius: 12,
+            },
+          },
+        },
+        MuiTooltip: {
+          defaultProps: {
+            enterTouchDelay: 0,
+          },
+        },
+      },
+    }),
+    { factor: 2.2 }
+  );
   
   const basePath = (import.meta.env.VITE_BASE_PATH || '/').replace(/\/$/, '');
   const router = createBrowserRouter(

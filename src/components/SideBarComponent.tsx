@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import "../../public/styles/links.css";
 import {
   List,
@@ -21,6 +21,7 @@ import {
   PeopleAltOutlined,
   AnalyticsOutlined,
   LocalShippingOutlined,
+  Close as CloseIcon,
 } from "@mui/icons-material";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -44,7 +45,6 @@ const SideBarComponent: React.FC<SideBarComponentProps> = ({ onItemClick }) => {
   };
   const location = useLocation();
   const currentPage = location.pathname;
-  console.log(currentPage);
 
   const sideBarComponent: SideBarItem[] = [
     {
@@ -90,37 +90,34 @@ const SideBarComponent: React.FC<SideBarComponentProps> = ({ onItemClick }) => {
     },
   ];
   
-  const [selected, setSelected] = useState<number>(0);
-  
-  const handleSelectedComponent = (_event: React.MouseEvent, index: number) => {
-    setSelected(index);
-  };
-  
   return (
     <>
-      <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0' }}>
+      <Box sx={{ p: { xs: 1.5, sm: 2 }, borderBottom: '1px solid #e0e0e0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
           Menu
         </Typography>
+        {onItemClick && (
+          <IconButton onClick={onItemClick} aria-label="Đóng menu" size="small">
+            <CloseIcon />
+          </IconButton>
+        )}
       </Box>
-      <List sx={{ px: 1, py: 2 }}>
-        {sideBarComponent.map((comp, index) => (
-          <ListItem disablePadding key={index} sx={{ mb: 1 }}>
+      <List sx={{ px: 1, py: 1.5 }}>
+        {sideBarComponent.map((comp, index) => {
+          const isSelected = currentPage === "/dashboard/" + comp.path;
+          return (
+          <ListItem disablePadding key={index} sx={{ mb: 0.5 }}>
             <Box width="100%">
               <ListItemButton
-                onClick={(event) => {
-                  handleSelectedComponent(event, index);
-                  navigateTo("/dashboard/" + comp.path);
-                }}
-                selected={
-                  index === selected &&
-                  currentPage === "/dashboard/" + comp.path
-                }
+                onClick={() => navigateTo("/dashboard/" + comp.path)}
+                selected={isSelected}
                 sx={{
                   borderRadius: 2,
-                  borderLeft: selected === index && currentPage === "/dashboard/" + comp.path ? 4 : 0,
+                  minHeight: 48,
+                  px: 1.5,
+                  borderLeft: isSelected ? 4 : 0,
                   borderColor: "primary.main",
-                  backgroundColor: selected === index && currentPage === "/dashboard/" + comp.path ? 'primary.light' : 'transparent',
+                  backgroundColor: isSelected ? 'primary.light' : 'transparent',
                   '&:hover': {
                     backgroundColor: 'action.hover',
                   },
@@ -139,14 +136,15 @@ const SideBarComponent: React.FC<SideBarComponentProps> = ({ onItemClick }) => {
                   primary={comp.title}
                   primaryTypographyProps={{
                     fontSize: "0.9rem",
-                    fontWeight: selected === index ? "bold" : "normal",
-                    color: selected === index ? "primary.main" : "text.primary",
+                    fontWeight: isSelected ? "bold" : "normal",
+                    color: isSelected ? "primary.main" : "text.primary",
                   }}
                 />
               </ListItemButton>
             </Box>
           </ListItem>
-        ))}
+          );
+        })}
       </List>
     </>
   );

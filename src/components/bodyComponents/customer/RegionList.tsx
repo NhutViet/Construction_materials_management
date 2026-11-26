@@ -6,13 +6,17 @@ import {
   Typography, 
   Chip,
   Tooltip,
-  IconButton
+  IconButton,
+  useTheme,
+  useMediaQuery,
 } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import { RootState } from '../../../store';
 import { LocationOn, People, AttachMoney, Receipt, TrendingUp } from '@mui/icons-material';
 
 const RegionList: React.FC = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { customerListByRegion, isCustomerListByRegionLoading } = useSelector((state: RootState) => ({
     customerListByRegion: state.analytics.customerListByRegion,
     isCustomerListByRegionLoading: state.analytics.isCustomerListByRegionLoading,
@@ -201,14 +205,14 @@ const RegionList: React.FC = () => {
   return (
     <Box
       sx={{
-        margin: 3,
+        margin: { xs: 1.5, sm: 2, md: 3 },
         bgcolor: "white",
         borderRadius: 2,
-        padding: 3,
+        padding: { xs: 1.5, sm: 2, md: 3 },
         height: "100%",
       }}
     >
-      <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+      <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
         Danh Sách Khu Vực
       </Typography>
       
@@ -219,6 +223,7 @@ const RegionList: React.FC = () => {
           borderRadius: 0,
           '& .MuiDataGrid-cell': {
             borderBottom: '1px solid #f0f0f0',
+            fontSize: { xs: '0.8rem', md: '0.875rem' },
           },
           '& .MuiDataGrid-row:hover': {
             backgroundColor: '#f5f5f5',
@@ -226,6 +231,19 @@ const RegionList: React.FC = () => {
         }}
         rows={rows}
         columns={columns}
+        density={isMobile ? 'compact' : 'standard'}
+        columnVisibilityModel={
+          isMobile
+            ? {
+                totalOrders: false,
+                avgOrderValue: false,
+                totalPaid: false,
+                totalDebt: false,
+                firstOrderDate: false,
+              }
+            : undefined
+        }
+        disableColumnMenu={isMobile}
         initialState={{
           pagination: {
             paginationModel: { page: 0, pageSize: 10 },

@@ -9,7 +9,9 @@ import {
   Box,
   Typography,
   Alert,
-  CircularProgress
+  CircularProgress,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import { Payment as PaymentIcon } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
@@ -32,6 +34,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { isLoading } = useSelector((state: RootState) => state.invoice);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [notes, setNotes] = useState<string>('');
@@ -128,6 +132,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       onClose={handleClose}
       maxWidth="sm"
       fullWidth
+      fullScreen={isMobile}
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <PaymentIcon color="primary" />

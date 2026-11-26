@@ -7,7 +7,7 @@ import CustomersGrowthCharts from "./CustomersGrowthCharts";
 import SalesGrowthCharts from "./SalesGrowthCharts";
 export default class Growth extends Component {
   render() {
-    const revenuCards = [
+    const revenuCards: React.ComponentProps<typeof RevenueCard>['card'][] = [
       {
         isMoney: false,
         number: "330",
@@ -38,36 +38,37 @@ export default class Growth extends Component {
       {
         isMoney: false,
         number: "1200",
-        percentage: "30",
+        percentage: 30,
+        upOrDown: "up",
         title: "Total Visitors",
         color: "green",
         subTitle: "vs prev week",
       },
     ];
     return (
-      <Box sx={{ p: 3, mx: 3 }}>
-        <Grid container sx={{ mx: 4 }}>
+      <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 }, mx: { xs: 0, sm: 2, md: 3 } }}>
+        <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ mx: { xs: 0, sm: 2, md: 4 } }}>
           {revenuCards.map((card) => (
-            <Grid item md={3}>
-              <Box m={4}>
+            <Grid item xs={6} sm={6} md={3} key={card.title}>
+              <Box m={{ xs: 0.5, sm: 1, md: 2 }}>
                 <RevenueCard card={card} />
               </Box>
             </Grid>
           ))}
         </Grid>
-        <Grid container sx={{ mx: 4 }}>
-          <Grid item md={6}>
+        <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ mx: { xs: 0, sm: 2, md: 4 }, mt: 1 }}>
+          <Grid item xs={12} md={6}>
             <SalesGrowthCharts />
           </Grid>
-          <Grid item md={6}>
+          <Grid item xs={12} md={6}>
             <VisitorsGrowthCharts />
           </Grid>
         </Grid>
-        <Grid container sx={{ mx: 4 }}>
-          <Grid item md={6}>
+        <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ mx: { xs: 0, sm: 2, md: 4 }, mt: 1 }}>
+          <Grid item xs={12} md={6}>
             <ProductsGrowthCharts />
           </Grid>
-          <Grid item md={6}>
+          <Grid item xs={12} md={6}>
             <CustomersGrowthCharts />
           </Grid>
         </Grid>

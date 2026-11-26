@@ -106,12 +106,12 @@ const PublicInvoiceSearch: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
-        <Box display="flex" alignItems="center" justifyContent="space-between" mb={3}>
-          <Box display="flex" alignItems="center">
-            <ReceiptIcon sx={{ mr: 2, fontSize: 32, color: 'primary.main' }} />
-            <Typography variant="h4" component="h1" fontWeight="bold">
+    <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 4 }, px: { xs: 1.5, sm: 3 } }}>
+      <Paper elevation={3} sx={{ p: { xs: 2, sm: 3, md: 4 }, mb: 4, borderRadius: 3 }}>
+        <Box display="flex" alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between" mb={3} flexDirection={{ xs: 'column', sm: 'row' }} gap={{ xs: 1.5, sm: 0 }}>
+          <Box display="flex" alignItems="center" sx={{ minWidth: 0 }}>
+            <ReceiptIcon sx={{ mr: { xs: 1, sm: 2 }, fontSize: { xs: 26, sm: 32 }, color: 'primary.main' }} />
+            <Typography variant="h4" component="h1" fontWeight="bold" sx={{ fontSize: { xs: '1.35rem', sm: '2rem' } }}>
               Tra cứu hóa đơn
             </Typography>
           </Box>
@@ -119,17 +119,17 @@ const PublicInvoiceSearch: React.FC = () => {
             variant="outlined"
             startIcon={<HomeIcon />}
             onClick={() => navigate('/')}
-            sx={{ ml: 2 }}
+            sx={{ ml: { xs: 0, sm: 2 }, width: { xs: '100%', sm: 'auto' } }}
           >
             Trang chủ
           </Button>
         </Box>
         
-        <Typography variant="body1" color="text.secondary" mb={4}>
+        <Typography variant="body1" color="text.secondary" mb={4} sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}>
           Nhập thông tin để tra cứu hóa đơn của bạn. Bạn có thể tìm kiếm bằng mã hóa đơn, số điện thoại hoặc tên khách hàng.
         </Typography>
 
-        <Grid container spacing={3} mb={3}>
+        <Grid container spacing={{ xs: 2, sm: 3 }} mb={3}>
           <Grid item xs={12} md={4}>
             <TextField
               fullWidth
@@ -168,7 +168,7 @@ const PublicInvoiceSearch: React.FC = () => {
           startIcon={<SearchIcon />}
           onClick={handleSearch}
           disabled={publicSearchLoading || (!searchData.invoiceNumber && !searchData.customerPhone && !searchData.customerName)}
-          sx={{ mb: 3 }}
+          sx={{ mb: 3, width: { xs: '100%', sm: 'auto' }, py: 1.25 }}
         >
           {publicSearchLoading ? <CircularProgress size={24} /> : 'Tìm kiếm'}
         </Button>
@@ -259,8 +259,8 @@ const PublicInvoiceSearch: React.FC = () => {
                     Chi tiết sản phẩm:
                   </Typography>
                   
-                  <TableContainer>
-                    <Table size="small">
+                  <TableContainer sx={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                    <Table size="small" sx={{ minWidth: 480 }}>
                       <TableHead>
                         <TableRow>
                           <TableCell><strong>Tên sản phẩm</strong></TableCell>

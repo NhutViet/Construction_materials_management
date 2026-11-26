@@ -10,7 +10,7 @@ import {
   CircularProgress,
   Link,
 } from '@mui/material';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../store';
 import { loginUser, clearError } from '../store/slices/authSlice';
@@ -81,10 +81,10 @@ const Login: React.FC = () => {
   };
 
   return (
-    <Container component="main" maxWidth="xs">
+    <Container component="main" maxWidth="xs" sx={{ px: { xs: 1.5, sm: 3 }, py: { xs: 3, sm: 6 } }}>
       <Box
         sx={{
-          marginTop: 8,
+          marginTop: { xs: 2, sm: 8 },
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -93,14 +93,15 @@ const Login: React.FC = () => {
         <Paper
           elevation={3}
           sx={{
-            padding: 4,
+            padding: { xs: 2.5, sm: 4 },
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             width: '100%',
+            borderRadius: 3,
           }}
         >
-          <Typography component="h1" variant="h4" sx={{ mb: 3, color: 'primary.main' }}>
+          <Typography component="h1" variant="h4" sx={{ mb: 3, color: 'primary.main', fontSize: { xs: '1.6rem', sm: '2rem' }, fontWeight: 700 }}>
             Đăng Nhập
           </Typography>
           
@@ -169,12 +170,15 @@ const Login: React.FC = () => {
               Hoặc
             </Typography>
             <Link 
-              href="/search-invoice" 
+              component={RouterLink}
+              to="/search-invoice"
               variant="body2" 
               sx={{ 
                 textDecoration: 'none',
                 fontWeight: 'bold',
                 color: 'primary.main',
+                py: 1,
+                display: 'inline-block',
                 '&:hover': {
                   textDecoration: 'underline'
                 }

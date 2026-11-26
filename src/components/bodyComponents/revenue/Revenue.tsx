@@ -163,7 +163,7 @@ const Revenue: React.FC = () => {
       {/* Revenue Cards - Responsive Grid */}
       <Grid container spacing={{ xs: 1, sm: 2, md: 3 }} sx={{ mx: { xs: 0, sm: 1, md: 2 } }}>
         {revenueCards.map((card, index) => (
-          <Grid item xs={12} sm={6} md={3} key={index}>
+          <Grid item xs={6} sm={6} md={3} key={index}>
             <Box sx={{ 
               m: { xs: 0.5, sm: 1, md: 2 },
               height: '100%'

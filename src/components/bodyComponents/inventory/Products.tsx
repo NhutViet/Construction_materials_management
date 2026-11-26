@@ -83,6 +83,7 @@ const Products: React.FC = () => {
       title: "ID",
       width: 100,
       align: "center",
+      mobileHide: true,
       render: (val) => (
         <Typography variant="body1" sx={{ fontFamily: 'monospace', fontSize: '1rem' }}>
           {val?.slice(-6) || 'N/A'}
@@ -113,6 +114,7 @@ const Products: React.FC = () => {
       title: "Giá Nhập",
       width: 120,
       align: "right",
+      mobileHide: true,
       render: (val) => (
         <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'warning.main', fontSize: '1rem' }}>
           {val ? `${val.toLocaleString()} VND` : 'N/A'}
@@ -150,6 +152,7 @@ const Products: React.FC = () => {
       key: "supplier",
       title: "Nhà Cung Cấp",
       width: 150,
+      mobileHide: true,
       render: (val) => (
         <Typography variant="body1" noWrap sx={{ fontSize: '1rem' }}>
           {val || 'N/A'}
@@ -161,6 +164,7 @@ const Products: React.FC = () => {
       title: "Trạng Thái",
       width: 120,
       align: "center",
+      mobileHide: true,
       render: (val) => (
         <Chip 
           label={val ? 'Hoạt Động' : 'Không Hoạt Động'} 
@@ -179,7 +183,7 @@ const Products: React.FC = () => {
         </Typography>
    
       </Box>
-      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
         <Box sx={{display: 'flex', flexDirection: 'row', gap: 1}}>
           <Typography variant="subtitle1" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
             Mô Tả:
@@ -253,7 +257,7 @@ const Products: React.FC = () => {
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Header with Add Button */}
-      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box sx={{ mb: 2, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 1.5, justifyContent: 'space-between', alignItems: { xs: 'stretch', sm: 'center' } }}>
         <Typography variant="h5" color="text.secondary" sx={{ fontSize: '1.3rem' }}>
           Tổng số sản phẩm: {materials.length}
         </Typography>
@@ -262,7 +266,7 @@ const Products: React.FC = () => {
           color="primary"
           startIcon={<AddIcon />}
           onClick={handleAddMaterial}
-          sx={{ fontSize: '1rem', py: 1.5 }}
+          sx={{ fontSize: '1rem', py: 1.5, width: { xs: '100%', sm: 'auto' } }}
         >
           Thêm Sản Phẩm
         </Button>

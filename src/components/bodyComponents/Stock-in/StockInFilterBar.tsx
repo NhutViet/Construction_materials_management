@@ -112,8 +112,8 @@ const StockInFilterBar: React.FC = () => {
   const hasActiveFilters = getActiveFiltersCount() > 0;
 
   return (
-    <Paper sx={{ p: 2, mb: 2 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+    <Paper sx={{ p: { xs: 1.5, sm: 2 }, mb: 2, borderRadius: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexWrap: 'wrap', gap: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <FilterIcon color="primary" />
           <Typography variant="h6">
@@ -134,8 +134,10 @@ const StockInFilterBar: React.FC = () => {
             onClick={handleClearFilters}
             disabled={!hasActiveFilters}
             color="error"
+            sx={{ px: { xs: 1, sm: 2 }, minWidth: 0 }}
           >
-            Xóa bộ lọc
+            <Box sx={{ display: { xs: 'none', sm: 'inline' } }}>Xóa bộ lọc</Box>
+            <Box sx={{ display: { xs: 'inline', sm: 'none' } }}>Xóa</Box>
           </Button>
           <IconButton
             onClick={() => setExpanded(!expanded)}

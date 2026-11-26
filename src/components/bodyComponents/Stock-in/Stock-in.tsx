@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Box, Typography, Button, CircularProgress, Alert, Snackbar, Grid, Card, CardContent, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Checkbox, FormControlLabel, Toolbar, TextField, TablePagination } from "@mui/material";
+import { Box, Typography, Button, CircularProgress, Alert, Snackbar, Grid, Card, CardContent, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Checkbox, FormControlLabel, Toolbar, TextField, TablePagination, useTheme, useMediaQuery } from "@mui/material";
 import { Edit as EditIcon, Delete as DeleteIcon, CheckCircle as CheckIcon, Payment as PaymentIcon, FileDownload as ExportIcon, Print as PrintIcon, SelectAll as SelectAllIcon, Clear as ClearIcon, Add as AddIcon, FirstPage as FirstPageIcon, LastPage as LastPageIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon } from "@mui/icons-material";
 import { AppDispatch, RootState } from "../../../store";
 import { 
@@ -26,6 +26,8 @@ import StockInModal from "./StockInModal";
 
 export default function StockIn() {
   const dispatch = useDispatch<AppDispatch>();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const stockIns = useSelector(selectStockIns); // Use server-side paginated data
   const isLoading = useSelector(selectStockInsLoading);
   const error = useSelector(selectStockInsError);
@@ -561,6 +563,7 @@ export default function StockIn() {
   const columns: Column[] = [
     {
       key: "select",
+      mobileHide: true,
       title: (
         <Checkbox
           checked={(() => {
@@ -600,6 +603,7 @@ export default function StockIn() {
     {
       key: "supplier",
       title: "Nhà cung cấp",
+      mobileHide: true,
       width: 200,
       render: (val) => (
         <Typography variant="body1" sx={{ fontSize: '1rem' }}>
@@ -610,6 +614,7 @@ export default function StockIn() {
     {
       key: "items",
       title: "Số lượng mặt hàng",
+      mobileHide: true,
       width: 150,
       align: "center",
       render: (val) => (
@@ -670,6 +675,7 @@ export default function StockIn() {
     {
       key: "createdAt",
       title: "Ngày tạo",
+      mobileHide: true,
       width: 120,
       render: (val) => (
         <Typography variant="body2" sx={{ fontSize: '1rem' }}>
@@ -1044,9 +1050,12 @@ export default function StockIn() {
                 minHeight: '52px',
                 justifyContent: 'center',
                 width: '100%',
+                flexWrap: 'wrap',
+                px: { xs: 0.5, sm: 2 },
               },
               '& .MuiTablePagination-selectLabel': {
                 fontSize: '14px',
+                display: { xs: 'none', sm: 'block' },
               },
               '& .MuiTablePagination-displayedRows': {
                 fontSize: '14px',
@@ -1058,7 +1067,7 @@ export default function StockIn() {
 
 
       {/* Status Update Dialog */}
-      <Dialog open={statusDialogOpen} onClose={() => setStatusDialogOpen(false)}>
+      <Dialog open={statusDialogOpen} onClose={() => setStatusDialogOpen(false)} fullScreen={isMobile}>
         <DialogTitle>Cập nhật trạng thái</DialogTitle>
         <DialogContent>
           <Typography>Chọn trạng thái mới cho phiếu nhập kho:</Typography>
@@ -1092,7 +1101,7 @@ export default function StockIn() {
       </Dialog>
 
       {/* Payment Status Update Dialog */}
-      <Dialog open={paymentDialogOpen} onClose={() => setPaymentDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={paymentDialogOpen} onClose={() => setPaymentDialogOpen(false)} maxWidth="sm" fullWidth fullScreen={isMobile}>
         <DialogTitle>Cập nhật thanh toán</DialogTitle>
         <DialogContent>
           {selectedStockIn && (
@@ -1173,6 +1182,7 @@ export default function StockIn() {
       <Dialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
+        fullScreen={isMobile}
       >
         <DialogTitle>Xác nhận xóa phiếu nhập kho</DialogTitle>
         <DialogContent>
@@ -1190,7 +1200,7 @@ export default function StockIn() {
       </Dialog>
 
       {/* Export Dialog */}
-      <Dialog open={exportDialogOpen} onClose={() => setExportDialogOpen(false)}>
+      <Dialog open={exportDialogOpen} onClose={() => setExportDialogOpen(false)} fullScreen={isMobile}>
         <DialogTitle>Xuất báo cáo</DialogTitle>
         <DialogContent>
           <Typography sx={{ mb: 2 }}>
@@ -1237,7 +1247,7 @@ export default function StockIn() {
       </Dialog>
 
       {/* Bulk Action Dialog */}
-      <Dialog open={bulkActionDialogOpen} onClose={() => setBulkActionDialogOpen(false)}>
+      <Dialog open={bulkActionDialogOpen} onClose={() => setBulkActionDialogOpen(false)} fullScreen={isMobile}>
         <DialogTitle>Thao tác hàng loạt</DialogTitle>
         <DialogContent>
           <Typography sx={{ mb: 2 }}>
