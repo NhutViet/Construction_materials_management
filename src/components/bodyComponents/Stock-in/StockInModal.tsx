@@ -26,7 +26,9 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Autocomplete
+  Autocomplete,
+  ToggleButton,
+  ToggleButtonGroup
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, Close as CloseIcon } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
@@ -36,7 +38,7 @@ import {
   updateStockIn, 
   selectStockInsLoading 
 } from '../../../store/slices/stockInSlice';
-import { fetchMaterials, selectMaterials } from '../../../store/slices/materialSlice';
+import { createMaterial, deleteMaterial, fetchMaterials, selectMaterials } from '../../../store/slices/materialSlice';
 
 interface StockInModalProps {
   open: boolean;
@@ -53,6 +55,27 @@ interface StockInItem {
   totalPrice: number;
   unit: string;
   supplier?: string;
+}
+
+const MATERIAL_CATEGORIES = [
+  'Vật liệu xây dựng',
+  'Thiết bị điện',
+  'Thiết bị nước',
+  'Vật liệu trang trí',
+  'Công cụ',
+  'An toàn lao động',
+  'Vật liệu nội thất',
+  'Khác'
+];
+
+const MATERIAL_UNITS = ['viên', 'kg', 'm', 'm²', 'm³', 'lít', 'thùng', 'cuộn', 'tấm', 'bộ', 'bao', 'cái'];
+
+interface NewMaterialDraft {
+  name: string;
+  category: string;
+  unit: string;
+  price: number;
+  importCost: number;
 }
 
 const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onSuccess }) => {
@@ -76,6 +99,16 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<any>(null);
   const [itemQuantity, setItemQuantity] = useState<number>(1);
+  const [isAddingNewMaterial, setIsAddingNewMaterial] = useState(false);
+  const [newMaterial, setNewMaterial] = useState<NewMaterialDraft>({
+    name: '',
+    category: MATERIAL_CATEGORIES[0],
+    unit: 'cái',
+    price: 0,
+    importCost: 0,
+  });
+  const [newMaterialDrafts, setNewMaterialDrafts] = useState<Record<string, NewMaterialDraft>>({});
+  const [newMaterialError, setNewMaterialError] = useState('');
 
   useEffect(() => {
     if (open) {
@@ -109,6 +142,10 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
       }
       setSelectedMaterial(null);
       setItemQuantity(1);
+      setIsAddingNewMaterial(false);
+      setNewMaterial({ name: '', category: MATERIAL_CATEGORIES[0], unit: 'cái', price: 0, importCost: 0 });
+      setNewMaterialDrafts({});
+      setNewMaterialError('');
       setErrors({});
     }
   }, [open, stockIn, dispatch]);
@@ -171,7 +208,95 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
     setItemQuantity(1);
   };
 
+  const updateNewMaterial = (field: keyof NewMaterialDraft, value: any) => {
+    setNewMaterial((prev) => ({ ...prev, [field]: value }));
+    if (newMaterialError) setNewMaterialError('');
+  };
+
+  const addNewMaterialToStockIn = () => {
+    const name = newMaterial.name.trim();
+    if (!name) {
+      setNewMaterialError('Vui lòng nhập tên vật tư.');
+      return;
+    }
+    if (itemQuantity <= 0) {
+      setNewMaterialError('Số lượng nhập phải lớn hơn 0.');
+      return;
+    }
+
+    const duplicateExisting = (materials || []).some(
+      (material) => material.name?.trim().toLowerCase() === name.toLowerCase()
+    );
+    if (duplicateExisting) {
+      setNewMaterialError('Vật tư này đã tồn tại. Chọn ở “Vật tư có sẵn”.');
+      return;
+    }
+
+    const existingEntry = Object.entries(newMaterialDrafts).find(
+      ([, draft]) => draft.name.trim().toLowerCase() === name.toLowerCase()
+    );
+
+    if (existingEntry) {
+      const [tempId, draft] = existingEntry;
+      if (
+        draft.category !== newMaterial.category ||
+        draft.unit !== newMaterial.unit ||
+        draft.importCost !== newMaterial.importCost
+      ) {
+        setNewMaterialError('Vật tư mới này đã có trong phiếu với thông tin/giá khác. Xoá dòng cũ rồi thêm lại.');
+        return;
+      }
+
+      setItems((prev) =>
+        prev.map((item) =>
+          item.materialId === tempId
+            ? {
+                ...item,
+                quantity: item.quantity + itemQuantity,
+                totalPrice: (item.quantity + itemQuantity) * item.unitPrice,
+              }
+            : item
+        )
+      );
+    } else {
+      const tempId = `new_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const item: StockInItem = {
+        materialId: tempId,
+        materialName: name,
+        quantity: itemQuantity,
+        unitPrice: newMaterial.importCost,
+        totalPrice: newMaterial.importCost * itemQuantity,
+        unit: newMaterial.unit,
+        supplier: formData.supplier,
+      };
+
+      setItems((prev) => [...prev, item]);
+      setNewMaterialDrafts((prev) => ({
+        ...prev,
+        [tempId]: { ...newMaterial, name },
+      }));
+    }
+
+    setNewMaterialError('');
+    setNewMaterial({
+      name: '',
+      category: MATERIAL_CATEGORIES[0],
+      unit: 'cái',
+      price: 0,
+      importCost: 0,
+    });
+    setItemQuantity(1);
+  };
+
   const removeItem = (index: number) => {
+    const item = items[index];
+    if (item && newMaterialDrafts[item.materialId]) {
+      setNewMaterialDrafts((prev) => {
+        const next = { ...prev };
+        delete next[item.materialId];
+        return next;
+      });
+    }
     setItems(prev => prev.filter((_, i) => i !== index));
   };
 
@@ -219,32 +344,77 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
     }
 
     setIsSubmitting(true);
+    const createdMaterialIds: string[] = [];
+
     try {
       const totals = calculateTotals();
+      const createdByTempId: Record<string, string> = {};
+
+      // Vật tư mới chỉ được tạo khi lưu phiếu nhập thành công.
+      // Nếu tạo vật tư xong mà lưu phiếu lỗi, các vật tư vừa tạo sẽ được xoá lại.
+      for (const [tempId, draft] of Object.entries(newMaterialDrafts)) {
+        if (!items.some((item) => item.materialId === tempId)) continue;
+
+        const created = await dispatch(
+          createMaterial({
+            name: draft.name.trim(),
+            category: draft.category,
+            unit: draft.unit,
+            quantity: 0,
+            price: draft.price,
+            importCost: draft.importCost,
+            supplier: formData.supplier.trim(),
+            description: '',
+          })
+        ).unwrap();
+
+        createdByTempId[tempId] = created._id;
+        createdMaterialIds.push(created._id);
+      }
+
+      const resolvedItems = items.map((item) => ({
+        ...item,
+        materialId: createdByTempId[item.materialId] || item.materialId,
+      }));
+
       const stockInData = {
         ...formData,
-        items: items.map(item => ({
-          ...item,
-          materialId: item.materialId || `temp_${Date.now()}_${Math.random()}`
-        })),
-        ...totals
+        items: resolvedItems,
+        ...totals,
       };
 
       if (stockIn) {
-        // Update existing stock-in
-        await dispatch(updateStockIn({ 
-          id: stockIn._id, 
-          data: stockInData 
+        await dispatch(updateStockIn({
+          id: stockIn._id,
+          data: stockInData,
         })).unwrap();
       } else {
-        // Create new stock-in
         await dispatch(createStockIn(stockInData)).unwrap();
+      }
+
+      // Cập nhật lại danh sách vật tư để trang Hàng hoá thấy vật tư mới.
+      try {
+        await dispatch(fetchMaterials()).unwrap();
+      } catch (refreshError) {
+        console.warn('Không refresh được danh sách vật tư:', refreshError);
       }
 
       onSuccess();
       onClose();
-    } catch (error) {
+    } catch (error: any) {
+      // Dọn các vật tư vừa tạo nếu phiếu nhập không lưu được.
+      for (const id of createdMaterialIds) {
+        try {
+          await dispatch(deleteMaterial(id)).unwrap();
+        } catch (cleanupError) {
+          console.warn('Không xoá được vật tư tạm:', cleanupError);
+        }
+      }
       console.error('Error saving stock-in:', error);
+      setErrors((prev: any) => ({
+        ...prev,
+        items: error?.message || 'Không lưu được phiếu nhập. Vui lòng thử lại.',
+      }));
     } finally {
       setIsSubmitting(false);
     }
@@ -335,7 +505,26 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
             <Typography variant="h6" sx={{ mb: 2, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
               Thêm sản phẩm
             </Typography>
-            <Grid container spacing={{ xs: 1.5, sm: 2 }} sx={{ mb: 3 }}>
+                        {!stockIn && (
+              <ToggleButtonGroup
+                value={isAddingNewMaterial ? 'new' : 'existing'}
+                exclusive
+                onChange={(_, value) => {
+                  if (!value) return;
+                  setIsAddingNewMaterial(value === 'new');
+                  setNewMaterialError('');
+                }}
+                size="small"
+                fullWidth
+                sx={{ mb: 2 }}
+              >
+                <ToggleButton value="existing">Vật tư có sẵn</ToggleButton>
+                <ToggleButton value="new">Vật tư mới</ToggleButton>
+              </ToggleButtonGroup>
+            )}
+
+            {!(isAddingNewMaterial && !stockIn) ? (
+<Grid container spacing={{ xs: 1.5, sm: 2 }} sx={{ mb: 3 }}>
               <Grid item xs={12} sm={12} md={5}>
                 <Autocomplete
                   options={activeMaterials}
@@ -410,6 +599,106 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
               </Grid>
             </Grid>
 
+            ) : (
+              <Grid container spacing={{ xs: 1.5, sm: 2 }} sx={{ mb: 3 }}>
+                <Grid item xs={12} sm={6} md={4}>
+                  <TextField
+                    fullWidth
+                    label="Tên vật tư *"
+                    value={newMaterial.name}
+                    onChange={(e) => updateNewMaterial('name', e.target.value)}
+                    size="small"
+                    error={!!newMaterialError && !newMaterial.name.trim()}
+                  />
+                </Grid>
+                <Grid item xs={6} sm={3} md={4}>
+                  <TextField
+                    select
+                    fullWidth
+                    label="Danh mục"
+                    value={newMaterial.category}
+                    onChange={(e) => updateNewMaterial('category', e.target.value)}
+                    size="small"
+                  >
+                    {MATERIAL_CATEGORIES.map((category) => (
+                      <MenuItem key={category} value={category}>{category}</MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+                <Grid item xs={6} sm={3} md={4}>
+                  <TextField
+                    select
+                    fullWidth
+                    label="Đơn vị"
+                    value={newMaterial.unit}
+                    onChange={(e) => updateNewMaterial('unit', e.target.value)}
+                    size="small"
+                  >
+                    {MATERIAL_UNITS.map((unit) => (
+                      <MenuItem key={unit} value={unit}>{unit}</MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+                <Grid item xs={6} sm={3} md={3}>
+                  <TextField
+                    fullWidth
+                    label="Giá bán"
+                    type="number"
+                    value={newMaterial.price}
+                    onChange={(e) => updateNewMaterial('price', parseFloat(e.target.value) || 0)}
+                    size="small"
+                  />
+                </Grid>
+                <Grid item xs={6} sm={3} md={3}>
+                  <TextField
+                    fullWidth
+                    label="Giá nhập đợt này"
+                    type="number"
+                    value={newMaterial.importCost}
+                    onChange={(e) => updateNewMaterial('importCost', parseFloat(e.target.value) || 0)}
+                    size="small"
+                  />
+                </Grid>
+                <Grid item xs={6} sm={3} md={2}>
+                  <TextField
+                    fullWidth
+                    label="Số lượng"
+                    type="number"
+                    value={itemQuantity}
+                    onChange={(e) => setItemQuantity(parseInt(e.target.value) || 1)}
+                    inputProps={{ min: 1 }}
+                    size="small"
+                  />
+                </Grid>
+                <Grid item xs={6} sm={9} md={4}>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    startIcon={<AddIcon />}
+                    onClick={addNewMaterialToStockIn}
+                    disabled={!newMaterial.name.trim() || itemQuantity <= 0}
+                    sx={{ height: { xs: '40px', sm: '56px' }, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                  >
+                    Thêm vật tư mới
+                  </Button>
+                </Grid>
+              </Grid>
+            )}
+
+            {!stockIn && isAddingNewMaterial && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                  Vật tư mới sẽ được tạo khi lưu phiếu nhập, kèm tồn kho vừa nhập. Giá nhập này dùng cho vật tư mới.
+                </Typography>
+              </Alert>
+            )}
+
+            {newMaterialError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {newMaterialError}
+              </Alert>
+            )}
+
             {errors.items && (
               <Alert severity="error" sx={{ mb: 2 }}>
                 {errors.items}
@@ -459,13 +748,23 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
                         <TableRow key={index}>
                           <TableCell sx={{ py: 1 }}>
                             <Box>
-                              <Typography 
-                                variant="body2" 
-                                fontWeight="medium"
-                                sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
-                              >
-                                {item.materialName}
-                              </Typography>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                                <Typography 
+                                  variant="body2" 
+                                  fontWeight="medium"
+                                  sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                                >
+                                  {item.materialName}
+                                </Typography>
+                                {newMaterialDrafts[item.materialId] && (
+                                  <Chip
+                                    label="Mới"
+                                    color="warning"
+                                    size="small"
+                                    sx={{ height: 20, fontSize: '0.65rem' }}
+                                  />
+                                )}
+                              </Box>
                               {material && (
                                 <Chip
                                   label={`Tồn: ${material.quantity}`}
