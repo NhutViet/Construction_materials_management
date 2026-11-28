@@ -59,6 +59,7 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
   const dispatch = useDispatch<AppDispatch>();
   const isLoading = useSelector(selectStockInsLoading);
   const materials = useSelector(selectMaterials);
+  const activeMaterials = (materials || []).filter((material) => material.isActive !== false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [formData, setFormData] = useState({
@@ -337,7 +338,7 @@ const StockInModal: React.FC<StockInModalProps> = ({ open, onClose, stockIn, onS
             <Grid container spacing={{ xs: 1.5, sm: 2 }} sx={{ mb: 3 }}>
               <Grid item xs={12} sm={12} md={5}>
                 <Autocomplete
-                  options={materials || []}
+                  options={activeMaterials}
                   getOptionLabel={(option) => `${option.name} - ${option.price?.toLocaleString('vi-VN') || 0}đ/${option.unit || 'cái'}`}
                   value={selectedMaterial}
                   onChange={(_, newValue) => setSelectedMaterial(newValue)}

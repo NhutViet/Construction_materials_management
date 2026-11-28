@@ -90,6 +90,7 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
   const dispatch = useDispatch<AppDispatch>();
   const { isLoading, error } = useSelector((state: RootState) => state.invoice);
   const { materials } = useSelector((state: RootState) => state.materials);
+  const activeMaterials = (materials || []).filter((material) => material.isActive !== false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -520,7 +521,7 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
 
             <Grid item xs={12} md={5}>
               <Autocomplete
-                options={materials}
+                options={activeMaterials}
                 getOptionLabel={(option) => `${option.name} - ${option.price.toLocaleString('vi-VN')}đ/${option.unit}`}
                 value={selectedMaterial}
                 onChange={(_, newValue) => setSelectedMaterial(newValue)}

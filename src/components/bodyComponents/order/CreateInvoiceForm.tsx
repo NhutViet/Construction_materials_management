@@ -65,6 +65,7 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
   const dispatch = useDispatch<AppDispatch>();
   const { isLoading, error } = useSelector((state: RootState) => state.invoice);
   const { materials } = useSelector((state: RootState) => state.materials);
+  const activeMaterials = (materials || []).filter((material) => material.isActive !== false);
 
   const [formData, setFormData] = useState<FormData>({
     customerName: '',
@@ -386,7 +387,7 @@ const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({ onClose, onSucces
 
         <Grid item xs={12} md={5}>
           <Autocomplete
-            options={materials}
+            options={activeMaterials}
             getOptionLabel={(option) => `${option.name} - ${option.price.toLocaleString('vi-VN')}đ/${option.unit}`}
             value={selectedMaterial}
             onChange={(_, newValue) => setSelectedMaterial(newValue)}
